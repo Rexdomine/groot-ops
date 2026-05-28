@@ -140,7 +140,7 @@ def test_dashboard_uses_stitch_inspired_supported_sections(monkeypatch, tmp_path
     dashboard = client.get("/clients/confort_properties_alex_john/dashboard")
 
     assert dashboard.status_code == 200
-    assert "Setup active" in dashboard.text
+    assert "Setup saved" in dashboard.text
     assert "Preview mode only" in dashboard.text
     assert "Run safe previews before enabling live scheduling" in dashboard.text
     assert "of 4 checks ready" in dashboard.text
@@ -148,6 +148,16 @@ def test_dashboard_uses_stitch_inspired_supported_sections(monkeypatch, tmp_path
     assert "No automation runs yet. Run a preview to see activity here." in dashboard.text
     assert "Save this dashboard link" in dashboard.text
     assert "/clients/confort_properties_alex_john/dashboard" in dashboard.text
+    assert "What to do next" in dashboard.text
+    assert "1. Run the daily summary preview" in dashboard.text
+    assert "2. Preview lead follow-up drafts" in dashboard.text
+    assert "3. Click Start Automation" in dashboard.text
+    assert "Start automation" in dashboard.text
+    assert "ask Groot Ops support/Drax" not in dashboard.text
+    assert "Start setup is not the activation button" in dashboard.text
+    assert "Edit setup" in dashboard.text
+    assert 'class="nav-cta" href="/setup">Start setup' not in dashboard.text
+    assert 'class="nav-cta" href="/clients/confort_properties_alex_john/dashboard">Open dashboard' in dashboard.text
     assert "Authentication" not in dashboard.text
     assert "Login" not in dashboard.text
 
@@ -183,3 +193,40 @@ def test_dashboard_shortcut_opens_latest_client_without_auth(monkeypatch, tmp_pa
 
     assert response.status_code == 307
     assert response.headers["location"] == "/clients/evergreen_realty_ada_agent/dashboard"
+
+
+def test_dashboard_start_automation_button_sets_active_status(monkeypatch, tmp_path):
+    monkeypatch.setenv("GROOT_OPS_DEMO_CONFIG_DIR", str(tmp_path))
+    client = TestClient(create_app())
+    client.post(
+        "/setup",
+        data={
+            "business_name": "Evergreen Realty",
+            "agent_name": "Ada Agent",
+            "agent_phone": "+155****0100",
+            "agent_email": "ada@example.com",
+            "timezone": "America/New_York",
+            "spreadsheet_url": "https://docs.google.com/spreadsheets/d/sheet123/edit",
+            "leads_sheet": "Leads",
+            "activity_log_sheet": "Activity Log",
+            "owner_channel": "email",
+            "owner_destination": "ada@example.com",
+            "daily_summary_time": "08:30",
+            "process_leads_frequency": "every_2h_weekdays",
+            "hot_timeline_days": "14",
+            "warm_timeline_days": "60",
+            "stale_after_days": "7",
+            "voice": "friendly",
+            "max_draft_chars": "700",
+            "required_disclaimer": "Reply STOP to opt out.",
+        },
+    )
+
+    response = client.post("/clients/evergreen_realty_ada_agent/activate")
+
+    assert response.status_code == 200
+    assert "Automation is on" in response.text
+    assert "Started by dashboard" in response.text
+    assert "Start automation" not in response.text
+    config_text = (tmp_path / "evergreen_realty_ada_agent.yaml").read_text()
+    assert "automation_status: active" in config_text

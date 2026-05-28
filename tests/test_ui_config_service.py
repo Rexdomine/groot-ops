@@ -87,6 +87,9 @@ def test_validate_setup_warns_when_google_env_missing(monkeypatch, tmp_path: Pat
     checks = validate_setup(config)
 
     assert any(check.label == "Google access" and check.status == "warn" for check in checks)
+    google_access = next(check for check in checks if check.label == "Google access")
+    assert "deployment environment" in google_access.message
+    assert "Vercel Production" in google_access.message
 
 
 def test_build_client_config_dict_persists_confirmed_column_mapping():

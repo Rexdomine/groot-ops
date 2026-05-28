@@ -12,11 +12,24 @@
         <span>{{ config.owner_notification_channel|title }} notifications</span>
         <span>·</span>
         <span>{{ config.process_leads_frequency.replace('_', ' ')|title }}</span>
-        <span class="status-badge ok"><span class="material-symbols-outlined">check_circle</span> Setup active</span>
+        <span class="status-badge ok"><span class="material-symbols-outlined">check_circle</span> Setup saved</span>
       </div>
     </div>
-    <a class="button secondary" href="/setup">New setup</a>
+    <a class="button secondary" href="/setup">Edit setup</a>
   </header>
+
+  <section class="next-steps-card" aria-label="What to do next">
+    <div class="next-steps-copy">
+      <p class="eyebrow">What to do next</p>
+      <h2>{% if config.automation_status == 'active' %}Automation is on — Groot Ops is running on the saved schedule.{% else %}Your preview passed — now click Start Automation.{% endif %}</h2>
+      <p>Start setup is not the activation button. Use this dashboard to test previews, then start the saved automation schedule yourself when everything looks right.</p>
+    </div>
+    <ol class="next-step-list">
+      <li><strong>1. Run the daily summary preview</strong><span>Confirm the owner email/Telegram summary looks useful.</span></li>
+      <li><strong>2. Preview lead follow-up drafts</strong><span>Check that draft messages match the realtor’s tone before any live processing.</span></li>
+      <li><strong>3. Click Start Automation</strong><span>Turn on the saved schedule directly from this dashboard — no operator handoff needed.</span></li>
+    </ol>
+  </section>
 
   <section class="dashboard-link-card" aria-label="Return to this dashboard">
     <div>
@@ -86,9 +99,19 @@
     </div>
 
     <aside class="dashboard-side-stack">
-      <section class="activation-card">
-        <span class="material-symbols-outlined">schedule</span>
-        <div><strong>Activation</strong><p>Scheduling is turned on after the client approves the settings and review process.</p></div>
+      <section class="activation-card {% if config.automation_status == 'active' %}active{% endif %}">
+        <span class="material-symbols-outlined">{% if config.automation_status == 'active' %}task_alt{% else %}schedule{% endif %}</span>
+        <div>
+          <strong>{% if config.automation_status == 'active' %}Automation is on{% else %}Ready to activate{% endif %}</strong>
+          {% if config.automation_status == 'active' %}
+            <p>Groot Ops will run using the saved schedule: {{ config.process_leads_frequency.replace('_', ' ') }}.</p>
+          {% else %}
+            <p>After previews look good, click the button below to start the saved automation schedule.</p>
+            <form method="post" action="/clients/{{ config.client_id }}/activate">
+              <button class="button primary" type="submit"><span class="material-symbols-outlined">rocket_launch</span> Start automation</button>
+            </form>
+          {% endif %}
+        </div>
       </section>
 
       <section class="dashboard-panel setup-health-panel">

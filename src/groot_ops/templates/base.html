@@ -22,7 +22,11 @@
         <a href="/setup">Setup</a>
         {% if configs %}<a href="/clients/{{ configs[0].stem }}/dashboard">Dashboard</a>{% endif %}
       </nav>
-      <a class="nav-cta" href="/setup">Start setup</a>
+      {% if configs %}
+        <a class="nav-cta" href="/clients/{{ configs[0].stem }}/dashboard">Open dashboard</a>
+      {% else %}
+        <a class="nav-cta" href="/setup">Start setup</a>
+      {% endif %}
     </div>
   </header>
   <main>{% block content %}{% endblock %}</main>
