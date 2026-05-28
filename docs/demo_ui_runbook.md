@@ -13,6 +13,7 @@ This UI is a guided demo console for real estate agents. It shows how simple Gro
 - Validates Google Sheet access where credentials are configured.
 - Previews daily owner summaries.
 - Previews lead follow-up drafts in dry-run mode.
+- Lets the owner click **Start automation** after previews look good. This turns on the saved automation status in the dashboard while keeping the no-customer-auto-send safety boundary.
 
 ## What it does not do yet
 
@@ -49,7 +50,12 @@ For live Google Sheets validation and previews through Maton:
 export MATON_API_KEY=...
 ```
 
-For Vercel, add this as a project environment variable.
+For Vercel, add this as a project environment variable for every environment you use. Preview deployments and Production deployments have separate scopes; if the key was added only to Preview, the dashboard will show it as missing immediately after a PR is merged to Production.
+
+```bash
+vercel env add MATON_API_KEY production
+vercel env add MATON_API_KEY preview
+```
 
 ## Vercel deployment shape
 
@@ -63,7 +69,8 @@ Deploy flow once Vercel access is connected:
 
 ```bash
 vercel link
-vercel env add MATON_API_KEY
+vercel env add MATON_API_KEY production
+vercel env add MATON_API_KEY preview
 vercel deploy
 ```
 
@@ -87,13 +94,14 @@ vercel deploy --prod
 10. Run **Daily summary preview**.
 11. Run **Preview lead drafts**.
 12. Explain: “No customer messages are sent automatically. You stay in control. Groot identifies the hot leads and drafts the follow-up.”
-13. Close with: “After you approve the setup, we activate weekday automation for you.”
+13. Click **Start automation** to turn on the saved dashboard schedule.
+14. Close with: “That’s it — the workflow is now active from the dashboard.”
 
 ## Troubleshooting
 
 ### `MATON_API_KEY is not configured`
 
-The UI can save setup, but live sheet validation/previews need the Maton API key in the environment.
+The UI can save setup, but live sheet validation/previews need the Maton API key in the environment. Vercel separates environment variables by deployment target. If this appears after merging a PR, the most likely root cause is that `MATON_API_KEY` exists for Preview but not Production. Add it to Production, then redeploy.
 
 ### `Could not read leads yet`
 

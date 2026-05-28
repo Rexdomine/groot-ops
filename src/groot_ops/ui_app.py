@@ -19,6 +19,7 @@ from .ui_config_service import (
     list_demo_configs,
     load_latest_or_sample,
     safe_config_path,
+    set_automation_status,
     validate_setup,
     write_client_config,
 )
@@ -139,6 +140,14 @@ def create_app() -> FastAPI:
         except Exception as exc:
             preview = f"Lead preview could not run yet: {exc}"
         return dashboard(request, client_id, preview=preview)
+
+    @app.post("/clients/{client_id}/activate", response_class=HTMLResponse)
+    def activate_automation(request: Request, client_id: str) -> Any:
+        config_path = safe_config_path(client_id)
+        if not config_path.exists():
+            raise HTTPException(status_code=404, detail="Demo client config not found")
+        set_automation_status(config_path, "active")
+        return dashboard(request, client_id, summary="Started by dashboard. Automation is on for the saved schedule.")
 
     return app
 

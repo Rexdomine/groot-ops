@@ -159,6 +159,13 @@ def write_client_config(path: Path, data: dict[str, Any]) -> None:
     path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
 
 
+def set_automation_status(path: Path, status: str) -> None:
+    raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    schedule = raw.setdefault("schedule", {})
+    schedule["automation_status"] = status
+    write_client_config(path, raw)
+
+
 def list_demo_configs(base_dir: Path | None = None) -> list[Path]:
     base = base_dir or demo_config_dir()
     if not base.exists():
@@ -179,7 +186,7 @@ def validate_setup(config: ClientConfig) -> list[SetupCheck]:
     if config.credentials_env and os.environ.get(config.credentials_env):
         checks.append(SetupCheck("Google access", "ok", f"Secure access is available through {config.credentials_env}."))
     else:
-        checks.append(SetupCheck("Google access", "warn", f"{config.credentials_env or 'Google credentials'} is not configured in this environment yet."))
+        checks.append(SetupCheck("Google access", "warn", f"{config.credentials_env or 'Google credentials'} is not configured in this deployment environment. If this started after merging a PR, add the secret to Vercel Production as well as Preview."))
     try:
         leads = create_lead_repository(config).list_leads()
     except Exception as exc:  # network/credential/sheet issues become client-friendly checks
