@@ -94,4 +94,5 @@ def load_client_config(path: str | Path) -> ClientConfig:
         daily_summary_time=str(schedule.get("daily_summary_time", "08:30")),
         process_leads_frequency=str(schedule.get("process_leads_frequency", "every_2h_weekdays")),
         automation_status=str(schedule.get("automation_status", "demo_manual")),
+        column_mapping={str(key): str(value) for key, value in (repository.get("column_mapping") or {}).items() if value},
     )

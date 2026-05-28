@@ -29,6 +29,7 @@ def create_lead_repository(config: ClientConfig):
             activity_log_sheet=config.activity_log_sheet,
             credentials_env=config.credentials_env,
             service_account_file=config.service_account_file,
+            column_mapping=config.column_mapping,
         )
     raise ValueError(f"Unsupported repository.type: {config.repository_type}")
 
@@ -45,5 +46,6 @@ def create_activity_recorder(config: ClientConfig, repository: object | None = N
             activity_log_sheet=config.activity_log_sheet,
             credentials_env=config.credentials_env,
             service_account_file=config.service_account_file,
+            column_mapping=config.column_mapping,
         )
     raise ValueError(f"Unsupported repository.type: {config.repository_type}")

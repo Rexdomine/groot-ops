@@ -57,7 +57,14 @@ def test_setup_page_uses_client_friendly_controls_and_explanations():
     assert 'data-setup-step="notifications"' in response.text
     assert 'function updateSetupProgress' in response.text
     assert "setupForm.addEventListener('focusin'" in response.text
-    assert 'IntersectionObserver' in response.text
+    assert 'Google Sheet URL or ID' in response.text
+    assert 'Smart column matching' in response.text
+    assert 'Groot can work with your existing sheet columns' in response.text
+    assert 'name="column_name"' in response.text
+    assert 'name="column_phone"' in response.text
+    assert 'name="column_desired_location"' in response.text
+    assert 'name="column_timeline"' in response.text
+    assert 'name="column_message"' in response.text
     assert 'this demo' not in response.text.lower()
     assert 'for demos' not in response.text.lower()
     assert 'manual demo' not in response.text.lower()

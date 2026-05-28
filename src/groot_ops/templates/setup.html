@@ -101,6 +101,32 @@
         <small>Recommended default: <strong>Activity Log</strong>. This tab records what the automation did.</small>
       </label>
     </div>
+    <div class="smart-mapping-card">
+      <div><span class="material-symbols-outlined fill">auto_awesome</span><div><strong>Smart column matching</strong><p>Groot can work with your existing sheet columns. Leave these blank for automatic matching, or fill them if a client uses unusual column names.</p></div></div>
+      <div class="field-grid two-cols compact-fields">
+        <label>Name column
+          <input name="column_name" value="{{ values.column_name or '' }}" placeholder="e.g. Client Name, Buyer Name">
+        </label>
+        <label>Phone column
+          <input name="column_phone" value="{{ values.column_phone or '' }}" placeholder="e.g. WhatsApp Number, Mobile">
+        </label>
+        <label>Email column
+          <input name="column_email" value="{{ values.column_email or '' }}" placeholder="e.g. Email Address">
+        </label>
+        <label>Budget column
+          <input name="column_budget" value="{{ values.column_budget or '' }}" placeholder="e.g. Price Range">
+        </label>
+        <label>Location column
+          <input name="column_desired_location" value="{{ values.column_desired_location or '' }}" placeholder="e.g. Preferred Area">
+        </label>
+        <label>Timeline column
+          <input name="column_timeline" value="{{ values.column_timeline or '' }}" placeholder="e.g. Move-in Timeline">
+        </label>
+        <label class="full-span">Notes / requirements column
+          <input name="column_message" value="{{ values.column_message or '' }}" placeholder="e.g. Inquiry Notes, Comments, Requirements">
+        </label>
+      </div>
+    </div>
   </section>
 
   <section class="setup-card" data-setup-step="notifications" data-step-label="Notifications" tabindex="-1">

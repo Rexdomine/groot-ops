@@ -67,11 +67,43 @@ def _int_from_form(form: dict[str, str], key: str, default: int) -> int:
         return default
 
 
+def _column_mapping_from_form(form: dict[str, str]) -> dict[str, str]:
+    fields = [
+        "lead_id",
+        "name",
+        "email",
+        "phone",
+        "source",
+        "budget",
+        "desired_location",
+        "timeline",
+        "property_type",
+        "message",
+        "status",
+    ]
+    mapping: dict[str, str] = {}
+    for field in fields:
+        value = (form.get(f"column_{field}") or "").strip()
+        if value:
+            mapping[field] = value
+    return mapping
+
+
 def build_client_config_dict(form: dict[str, str]) -> dict[str, Any]:
     business_name = (form.get("business_name") or "Demo Realty Group").strip()
     agent_name = (form.get("agent_name") or "Demo Agent").strip()
     spreadsheet_id = parse_spreadsheet_id(form.get("spreadsheet_url") or form.get("spreadsheet_id") or "")
     client_id = (form.get("client_id") or slugify_client_id(business_name, agent_name)).strip()
+    repository = {
+        "type": "google_sheets",
+        "spreadsheet_id": spreadsheet_id,
+        "leads_sheet": (form.get("leads_sheet") or "Leads").strip(),
+        "activity_log_sheet": (form.get("activity_log_sheet") or "Activity Log").strip(),
+        "credentials_env": "MATON_API_KEY",
+    }
+    column_mapping = _column_mapping_from_form(form)
+    if column_mapping:
+        repository["column_mapping"] = column_mapping
     return {
         "client_id": client_id,
         "business_name": business_name,
@@ -79,13 +111,7 @@ def build_client_config_dict(form: dict[str, str]) -> dict[str, Any]:
         "agent_phone": (form.get("agent_phone") or "").strip(),
         "agent_email": (form.get("agent_email") or "").strip(),
         "timezone": (form.get("timezone") or "America/New_York").strip(),
-        "repository": {
-            "type": "google_sheets",
-            "spreadsheet_id": spreadsheet_id,
-            "leads_sheet": (form.get("leads_sheet") or "Leads").strip(),
-            "activity_log_sheet": (form.get("activity_log_sheet") or "Activity Log").strip(),
-            "credentials_env": "MATON_API_KEY",
-        },
+        "repository": repository,
         "scoring": {
             "hot_timeline_days": _int_from_form(form, "hot_timeline_days", 14),
             "warm_timeline_days": _int_from_form(form, "warm_timeline_days", 60),

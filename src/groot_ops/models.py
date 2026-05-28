@@ -32,6 +32,7 @@ class ClientConfig:
     daily_summary_time: str = "08:30"
     process_leads_frequency: str = "every_2h_weekdays"
     automation_status: str = "demo_manual"
+    column_mapping: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass

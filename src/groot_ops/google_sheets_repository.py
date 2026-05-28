@@ -8,6 +8,7 @@ from typing import Any, Protocol
 
 from .csv_repository import DEFAULT_FIELDS
 from .models import Lead, utc_now_iso
+from .sheet_mapping import infer_column_mapping, map_sheet_row, row_for_original_headers
 
 
 class GoogleSheetsConfigurationError(RuntimeError):
@@ -110,6 +111,7 @@ class GoogleSheetsLeadRepository:
         activity_log_sheet: str = "Activity Log",
         credentials_env: str | None = None,
         service_account_file: str | None = None,
+        column_mapping: dict[str, str] | None = None,
         client: Any | None = None,
     ) -> None:
         if not spreadsheet_id:
@@ -119,6 +121,9 @@ class GoogleSheetsLeadRepository:
         self.activity_log_sheet = activity_log_sheet or "Activity Log"
         self.credentials_env = credentials_env
         self.service_account_file = service_account_file
+        self.column_mapping = column_mapping or {}
+        self._last_headers: list[str] = []
+        self._last_mapping: dict[str, str] = {}
         self._client = client
 
     @property
@@ -182,23 +187,33 @@ class GoogleSheetsLeadRepository:
         if not values:
             return []
         headers = [str(header).strip() for header in values[0]]
+        mapping = infer_column_mapping(headers, self.column_mapping)
+        self._last_headers = headers
+        self._last_mapping = mapping
         leads: list[Lead] = []
         for row in values[1:]:
-            data = {header: (row[index] if index < len(row) else "") for index, header in enumerate(headers) if header}
+            data = map_sheet_row(headers, row, mapping)
             if any(str(value).strip() for value in data.values()):
                 leads.append(Lead.from_dict(data))
         return leads
 
     def save_leads(self, leads: list[Lead]) -> None:
-        fieldnames = list(DEFAULT_FIELDS)
+        original_headers = [header for header in self._last_headers if header]
+        mapping = self._last_mapping or infer_column_mapping(original_headers, self.column_mapping)
+        fieldnames = list(original_headers) if original_headers else list(DEFAULT_FIELDS)
         for lead in leads:
-            for key in lead.extra:
-                if key not in fieldnames:
+            for key, value in lead.to_dict().items():
+                if key.startswith("original_"):
+                    continue
+                mapped_header = mapping.get(key)
+                if mapped_header and mapped_header not in fieldnames:
+                    fieldnames.append(mapped_header)
+                elif not mapped_header and key not in fieldnames:
                     fieldnames.append(key)
         rows = [fieldnames]
         for lead in leads:
             data = lead.to_dict()
-            rows.append([data.get(field, "") for field in fieldnames])
+            rows.append(row_for_original_headers(data, fieldnames, mapping))
         self._values().update(
             spreadsheetId=self.spreadsheet_id,
             range=f"{self.leads_sheet}!A1",
