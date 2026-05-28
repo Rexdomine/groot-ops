@@ -41,7 +41,8 @@ def create_app() -> FastAPI:
 
     @app.get("/setup", response_class=HTMLResponse)
     def setup(request: Request) -> Any:
-        return templates.TemplateResponse(request, "setup.html", {"values": {}, "checks": []})
+        configs = list_demo_configs()
+        return templates.TemplateResponse(request, "setup.html", {"values": {}, "checks": [], "configs": configs})
 
     @app.get("/dashboard")
     def latest_dashboard() -> RedirectResponse:
@@ -67,6 +68,7 @@ def create_app() -> FastAPI:
                 "config_path": str(config_path),
                 "checks": checks,
                 "saved": True,
+                "configs": list_demo_configs(),
             },
         )
 
@@ -106,6 +108,7 @@ def create_app() -> FastAPI:
                 "ready_checks": ready_checks,
                 "total_checks": len(checks),
                 "dashboard_path": dashboard_path,
+                "configs": list_demo_configs(),
             },
         )
 

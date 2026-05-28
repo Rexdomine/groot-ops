@@ -12,11 +12,24 @@
         <span>{{ config.owner_notification_channel|title }} notifications</span>
         <span>·</span>
         <span>{{ config.process_leads_frequency.replace('_', ' ')|title }}</span>
-        <span class="status-badge ok"><span class="material-symbols-outlined">check_circle</span> Setup active</span>
+        <span class="status-badge ok"><span class="material-symbols-outlined">check_circle</span> Setup saved</span>
       </div>
     </div>
-    <a class="button secondary" href="/setup">New setup</a>
+    <a class="button secondary" href="/setup">Edit setup</a>
   </header>
+
+  <section class="next-steps-card" aria-label="What to do next">
+    <div class="next-steps-copy">
+      <p class="eyebrow">What to do next</p>
+      <h2>Your preview passed — now verify drafts, then approve activation.</h2>
+      <p>Start setup is not the activation button. Use this dashboard to test the workflow; activation is enabled only after the owner approves the previews and operating schedule.</p>
+    </div>
+    <ol class="next-step-list">
+      <li><strong>1. Run the daily summary preview</strong><span>Confirm the owner email/Telegram summary looks useful.</span></li>
+      <li><strong>2. Preview lead follow-up drafts</strong><span>Check that draft messages match the realtor’s tone before any live processing.</span></li>
+      <li><strong>3. Approve activation with your operator</strong><span>When previews look right, ask Groot Ops support/Drax to turn on the scheduled automation for this client.</span></li>
+    </ol>
+  </section>
 
   <section class="dashboard-link-card" aria-label="Return to this dashboard">
     <div>

@@ -140,7 +140,7 @@ def test_dashboard_uses_stitch_inspired_supported_sections(monkeypatch, tmp_path
     dashboard = client.get("/clients/confort_properties_alex_john/dashboard")
 
     assert dashboard.status_code == 200
-    assert "Setup active" in dashboard.text
+    assert "Setup saved" in dashboard.text
     assert "Preview mode only" in dashboard.text
     assert "Run safe previews before enabling live scheduling" in dashboard.text
     assert "of 4 checks ready" in dashboard.text
@@ -148,6 +148,14 @@ def test_dashboard_uses_stitch_inspired_supported_sections(monkeypatch, tmp_path
     assert "No automation runs yet. Run a preview to see activity here." in dashboard.text
     assert "Save this dashboard link" in dashboard.text
     assert "/clients/confort_properties_alex_john/dashboard" in dashboard.text
+    assert "What to do next" in dashboard.text
+    assert "1. Run the daily summary preview" in dashboard.text
+    assert "2. Preview lead follow-up drafts" in dashboard.text
+    assert "3. Approve activation with your operator" in dashboard.text
+    assert "Start setup is not the activation button" in dashboard.text
+    assert "Edit setup" in dashboard.text
+    assert 'class="nav-cta" href="/setup">Start setup' not in dashboard.text
+    assert 'class="nav-cta" href="/clients/confort_properties_alex_john/dashboard">Open dashboard' in dashboard.text
     assert "Authentication" not in dashboard.text
     assert "Login" not in dashboard.text
 
