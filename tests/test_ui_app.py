@@ -20,11 +20,18 @@ def test_setup_page_uses_client_friendly_controls_and_explanations():
     assert response.status_code == 200
     assert '<select name="timezone"' in response.text
     assert '<input type="time" name="daily_summary_time"' in response.text
-    assert 'Hot leads: people likely to move soon' in response.text
-    assert 'Warm leads: interested, but not urgent yet' in response.text
-    assert 'Stale leads: no recent response' in response.text
     assert 'What these fields mean' in response.text
     assert 'Recommended default' in response.text
+    assert 'When should a lead become urgent?' in response.text
+    assert 'If the lead says they want to buy, sell, or tour within this many days' in response.text
+    assert 'When should Groot keep nurturing instead of marking the lead urgent?' in response.text
+    assert 'When should Groot remind the agent to re-engage?' in response.text
+    assert 'Urgent lead window' in response.text
+    assert 'Nurture window' in response.text
+    assert 'Re-engage reminder' in response.text
+    assert 'this demo' not in response.text.lower()
+    assert 'for demos' not in response.text.lower()
+    assert 'manual demo' not in response.text.lower()
 
 
 def test_setup_saves_demo_config_and_shows_dashboard_link(monkeypatch, tmp_path):

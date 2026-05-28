@@ -2,9 +2,9 @@
 {% block title %}Setup Groot Ops{% endblock %}
 {% block content %}
 <section class="page-head">
-  <p class="eyebrow">5-minute realtor setup</p>
-  <h1>Make automation feel simple.</h1>
-  <p class="lede">Fill this once, validate the lead sheet, then preview exactly what Groot Ops will do. Each field includes plain-English guidance so a realtor does not need to understand the backend.</p>
+  <p class="eyebrow">Realtor onboarding</p>
+  <h1>Set up your lead follow-up engine.</h1>
+  <p class="lede">Connect the lead sheet, choose how the owner gets updates, and set simple follow-up rules. Create a production-ready setup your team can manage without technical help.</p>
 </section>
 
 {% if saved %}
@@ -17,12 +17,12 @@
 <section class="setup-intro panel">
   <div>
     <h2>What these fields mean</h2>
-    <p>Groot Ops uses this setup to decide where leads live, when Rex/the realtor gets summaries, and how urgent each lead is. Recommended defaults are pre-filled for a first demo.</p>
+    <p>Groot Ops uses these settings to know where leads live, when the realtor gets updates, and when a lead needs attention. Keep the recommended defaults unless the business has a specific follow-up policy.</p>
   </div>
   <div class="info-grid">
-    <div><strong>Hot leads</strong><span>People likely to buy or book a showing soon.</span></div>
-    <div><strong>Warm leads</strong><span>Interested, but not urgent yet.</span></div>
-    <div><strong>Stale leads</strong><span>No recent response or overdue follow-up.</span></div>
+    <div><strong>Lead source</strong><span>The Google Sheet where new leads and updates are stored.</span></div>
+    <div><strong>Owner updates</strong><span>Daily summaries and reminders sent to the realtor or operator.</span></div>
+    <div><strong>Follow-up rules</strong><span>Simple timing rules that decide what needs attention first.</span></div>
   </div>
 </section>
 
@@ -39,7 +39,7 @@
     </label>
     <div class="row">
       <label>Agent email
-        <input type="email" name="agent_email" required value="{{ values.agent_email or '' }}" placeholder="agent@example.com">
+        <input type="email" name="agent_email" required value="{{ values.agent_email or '' }}" placeholder="hello@evergreenrealty.com">
         <small>Used for owner notifications when email is selected.</small>
       </label>
       <label>Agent phone
@@ -68,10 +68,10 @@
       <small>Pick the client’s local timezone so summaries and follow-ups run at the right local time.</small>
     </label>
 
-    <div class="step"><span>2</span><div><h2>Lead Source</h2><p>Connect the Google Sheet they already understand.</p></div></div>
+    <div class="step"><span>2</span><div><h2>Lead Source</h2><p>Connect the Google Sheet the business already uses.</p></div></div>
     <label>Google Sheet URL or ID
       <input name="spreadsheet_url" required value="{{ values.spreadsheet_url or '' }}" placeholder="https://docs.google.com/spreadsheets/d/.../edit">
-      <small>Paste the full Google Sheet link. Groot will extract the ID automatically.</small>
+      <small>Paste the full Google Sheet link. Groot will extract the sheet ID automatically.</small>
     </label>
     <div class="row">
       <label>Leads sheet
@@ -91,9 +91,9 @@
         <select name="owner_channel">
           <option value="telegram" {% if selected_channel == 'telegram' %}selected{% endif %}>Telegram</option>
           <option value="email" {% if selected_channel == 'email' %}selected{% endif %}>Email</option>
-          <option value="whatsapp" {% if selected_channel == 'whatsapp' %}selected{% endif %}>WhatsApp later</option>
+          <option value="whatsapp" {% if selected_channel == 'whatsapp' %}selected{% endif %}>WhatsApp</option>
         </select>
-        <small>Recommended for demos: Telegram or Email.</small>
+        <small>Choose where the owner wants to receive summaries and reminders.</small>
       </label>
       <label>Destination
         <input name="owner_destination" value="{{ values.owner_destination or '' }}" placeholder="Telegram handle or email">
@@ -110,28 +110,34 @@
         <select name="process_leads_frequency">
           <option value="every_2h_weekdays" {% if selected_frequency == 'every_2h_weekdays' %}selected{% endif %}>Every 2 hours on weekdays</option>
           <option value="daily_weekdays" {% if selected_frequency == 'daily_weekdays' %}selected{% endif %}>Once daily on weekdays</option>
-          <option value="manual_demo" {% if selected_frequency == 'manual_demo' %}selected{% endif %}>Manual demo only</option>
+          <option value="manual_demo" {% if selected_frequency == 'manual_demo' %}selected{% endif %}>Only when started manually</option>
         </select>
         <small>How often Groot should check the sheet for new or overdue leads.</small>
       </label>
     </div>
 
-    <div class="step"><span>4</span><div><h2>Automation Rules</h2><p>Beginner-friendly rules that score leads and draft follow-up.</p></div></div>
+    <div class="step"><span>4</span><div><h2>Follow-Up Rules</h2><p>Tell Groot when a lead should be treated as urgent, nurtured, or re-engaged.</p></div></div>
     <div class="rule-explainer">
-      <strong>Recommended default:</strong> Hot within 14 days, warm within 60 days, stale after 7 days with no follow-up.
+      <strong>Recommended default:</strong> Treat leads as urgent if they want action within 14 days, nurture leads up to 60 days out, and remind the agent after 7 days without follow-up.
     </div>
-    <div class="row three">
-      <label>Hot days
+    <div class="rule-cards">
+      <label class="rule-card">Urgent lead window
+        <span class="rule-question">When should a lead become urgent?</span>
         <input type="number" min="1" max="365" name="hot_timeline_days" value="{{ values.hot_timeline_days or 14 }}">
-        <small>Hot leads: people likely to move soon. If their timeline is within this many days, prioritize them.</small>
+        <small>If the lead says they want to buy, sell, or tour within this many days, Groot puts them at the top of the follow-up list.</small>
+        <em>Example: 14 means “I want to move in the next 2 weeks” becomes urgent.</em>
       </label>
-      <label>Warm days
+      <label class="rule-card">Nurture window
+        <span class="rule-question">When should Groot keep nurturing instead of marking the lead urgent?</span>
         <input type="number" min="1" max="365" name="warm_timeline_days" value="{{ values.warm_timeline_days or 60 }}">
-        <small>Warm leads: interested, but not urgent yet. Use this for people still comparing options.</small>
+        <small>If the lead’s timeline is later than urgent but within this many days, Groot keeps them warm with helpful follow-up.</small>
+        <em>Example: 60 means a buyer planning for next month continues to receive regular follow-up.</em>
       </label>
-      <label>Stale after
+      <label class="rule-card">Re-engage reminder
+        <span class="rule-question">When should Groot remind the agent to re-engage?</span>
         <input type="number" min="1" max="90" name="stale_after_days" value="{{ values.stale_after_days or 7 }}">
-        <small>Stale leads: no recent response. Groot flags them when follow-up is overdue by this many days.</small>
+        <small>If nobody has followed up for this many days, Groot flags the lead so the agent can restart the conversation.</small>
+        <em>Example: 7 means a lead should not sit untouched for more than a week.</em>
       </label>
     </div>
     <label>Message tone
@@ -145,7 +151,7 @@
       </label>
       <label>Opt-out note
         <input name="required_disclaimer" value="{{ values.required_disclaimer or 'Reply STOP to opt out.' }}">
-        <small>Safety/compliance note added to outbound-style drafts.</small>
+        <small>Safety/compliance note added to follow-up message drafts.</small>
       </label>
     </div>
 
@@ -163,12 +169,12 @@
     {% else %}
       <p>After you save, Groot will verify profile, Google access, and lead sheet readiness.</p>
     {% endif %}
-    <div class="safety-note"><strong>Safety boundary:</strong> this demo does not send messages to leads. It only previews summaries and draft follow-ups.</div>
+    <div class="safety-note"><strong>Safety boundary:</strong> Groot does not send messages to leads automatically. It prepares summaries and draft follow-ups for human review.</div>
     <div class="field-guide">
       <h3>Quick field guide</h3>
       <p><strong>Timeline:</strong> how soon the lead wants to buy, sell, or tour.</p>
       <p><strong>Follow-up due:</strong> when the agent should contact the lead again.</p>
-      <p><strong>Lead temperature:</strong> Groot’s simple hot/warm/cold priority label.</p>
+      <p><strong>Lead priority:</strong> Groot’s simple urgent/nurture/re-engage recommendation.</p>
     </div>
   </aside>
 </section>

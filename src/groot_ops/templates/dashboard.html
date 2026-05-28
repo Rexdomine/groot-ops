@@ -3,7 +3,7 @@
 {% block content %}
 <section class="page-head dashboard-head">
   <div>
-    <p class="eyebrow">Demo dashboard</p>
+    <p class="eyebrow">Lead follow-up dashboard</p>
     <h1>{{ config.business_name }}</h1>
     <p class="lede">{{ config.agent_name }} · {{ config.owner_notification_channel|title }} notifications · {{ config.automation_status.replace('_', ' ')|title }}</p>
   </div>
@@ -20,10 +20,10 @@
 <section class="grid two">
   <div class="panel">
     <h2>Preview actions</h2>
-    <p>These actions are safe for demos. No automatic customer messages are sent; previews only show summaries and draft follow-ups.</p>
+    <p>These actions are safe to run. No automatic customer messages are sent; previews only show summaries and draft follow-ups.</p>
     <form method="post" action="/clients/{{ config.client_id }}/preview-summary"><button class="button primary" type="submit">Run daily summary preview</button></form>
     <form class="inline-form" method="post" action="/clients/{{ config.client_id }}/preview-leads"><input type="number" name="limit" value="3" min="1" max="10"><button class="button" type="submit">Preview lead drafts</button></form>
-    <div class="safety-note"><strong>Activation:</strong> Rex/operator turns on Hermes scheduling after the client approves the pilot settings.</div>
+    <div class="safety-note"><strong>Activation:</strong> Scheduling is turned on after the client approves the settings and review process.</div>
   </div>
   <div class="panel">
     <h2>Setup health</h2>
@@ -50,7 +50,7 @@
       </article>
     {% endfor %}
   </div>
-  {% else %}<p>No leads to show yet. Validate the connected Google Sheet or run with sample data locally.</p>{% endif %}
+  {% else %}<p>No leads to show yet. Validate the connected Google Sheet or connect a sample lead sheet.</p>{% endif %}
 </section>
 
 <section class="panel schedule">
