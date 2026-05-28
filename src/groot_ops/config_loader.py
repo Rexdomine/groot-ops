@@ -24,6 +24,8 @@ def load_client_config(path: str | Path) -> ClientConfig:
     scoring = raw.get("scoring") or {}
     messaging = raw.get("messaging") or {}
     summary = raw.get("summary") or {}
+    notifications = raw.get("notifications") or {}
+    schedule = raw.get("schedule") or {}
 
     required = ["client_id", "business_name", "agent_name", "agent_phone", "agent_email"]
     missing = [key for key in required if not raw.get(key)]
@@ -87,4 +89,9 @@ def load_client_config(path: str | Path) -> ClientConfig:
         max_draft_chars=int(messaging.get("max_draft_chars", 700)),
         required_disclaimer=messaging.get("required_disclaimer", "Reply STOP to opt out."),
         voice=messaging.get("voice", "friendly, concise, professional"),
+        owner_notification_channel=str(notifications.get("owner_channel", "telegram")),
+        owner_notification_destination=str(notifications.get("owner_destination", "")),
+        daily_summary_time=str(schedule.get("daily_summary_time", "08:30")),
+        process_leads_frequency=str(schedule.get("process_leads_frequency", "every_2h_weekdays")),
+        automation_status=str(schedule.get("automation_status", "demo_manual")),
     )

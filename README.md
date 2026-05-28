@@ -16,6 +16,7 @@ Phase 1.5 status: **pilot-ready foundation**. The system can read leads, score t
 - Maton or native Google Sheets access
 - Local tests and GitHub Actions CI
 - Production-readiness static check for required docs and obvious secret leaks
+- Lightweight FastAPI demo UI for realtor setup, validation, previews, and Vercel deployment
 
 ## Quick start
 
@@ -46,6 +47,14 @@ Run the daily summary:
 ```bash
 python -m groot_ops.main_daily_summary --client configs/sample_realtor.yaml
 ```
+
+Run the lightweight demo UI locally:
+
+```bash
+uv run --extra ui python -m groot_ops.main_ui --host 127.0.0.1 --port 8080
+```
+
+Open `http://127.0.0.1:8080/setup`.
 
 ## Pilot-safe Google Sheets run order
 
@@ -98,6 +107,10 @@ Private files should stay untracked:
 - `src/groot_ops/daily_summary.py`: summary buckets and formatting
 - `src/groot_ops/main_process_leads.py`: CLI for scoring and drafting
 - `src/groot_ops/main_daily_summary.py`: CLI for summary output
+- `src/groot_ops/ui_app.py`: FastAPI demo setup/dashboard app
+- `src/groot_ops/main_ui.py`: local UI launcher
+- `api/index.py`: Vercel Python serverless entrypoint
+- `vercel.json`: Vercel routing/build config
 - `scripts/production_readiness_check.py`: CI/local readiness guard
 
 ## Documentation
@@ -108,7 +121,9 @@ Private files should stay untracked:
 - `docs/client_onboarding_checklist.md`: pilot onboarding checklist
 - `docs/safety_policy.md`: approval, privacy, and no-auto-send rules
 - `docs/deployment_cron.md`: Phase 2 scheduling/deployment notes
+- `docs/demo_ui_runbook.md`: local/Vercel UI demo instructions and realtor sales script
 - `docs/plans/2026-05-28-phase-1-5-production-readiness.md`: implementation plan
+- `docs/plans/2026-05-28-lightweight-demo-ui.md`: demo UI implementation plan
 
 ## Safety and scope
 

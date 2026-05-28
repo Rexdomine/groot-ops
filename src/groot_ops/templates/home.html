@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Groot Ops Demo Console{% endblock %}
+{% block content %}
+<section class="hero">
+  <div>
+    <p class="eyebrow">AI lead follow-up for real estate agents</p>
+    <h1>Connect your lead sheet. See hot leads. Approve smart follow-ups.</h1>
+    <p class="lede">A lightweight demo console that shows how Groot Ops helps agents follow up faster without replacing their current Google Sheet workflow.</p>
+    <div class="actions">
+      <a class="button primary" href="/setup">Start demo setup</a>
+      {% if configs %}<a class="button" href="/clients/{{ configs[0].stem }}/dashboard">Open latest dashboard</a>{% endif %}
+    </div>
+  </div>
+  <div class="hero-card">
+    <h2>Demo promise</h2>
+    <ul class="clean-list">
+      <li>✅ Google Sheets as the lead source</li>
+      <li>✅ Telegram/email owner notifications preference</li>
+      <li>✅ Daily summary preview</li>
+      <li>✅ 3-lead follow-up draft preview</li>
+      <li>🛡️ No automatic customer messages</li>
+    </ul>
+  </div>
+</section>
+{% if configs %}
+<section class="panel">
+  <h2>Recent demo clients</h2>
+  <div class="client-list">
+    {% for config in configs %}
+      <a href="/clients/{{ config.stem }}/dashboard">{{ config.stem.replace('_', ' ').title() }}</a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}
