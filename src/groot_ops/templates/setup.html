@@ -108,20 +108,21 @@
     <p class="card-copy">Choose how Groot should alert the owner when a high-priority lead requires attention.</p>
     {% set selected_channel = values.owner_channel or 'telegram' %}
     <div class="channel-grid" role="radiogroup" aria-label="Notification channel">
-      <label class="channel-card {% if selected_channel == 'telegram' %}selected{% endif %}">
+      <label class="channel-card" onclick="this.querySelector('input').checked = true">
         <input type="radio" name="owner_channel" value="telegram" {% if selected_channel == 'telegram' %}checked{% endif %}>
         <span class="material-symbols-outlined telegram">send</span>
         <strong>Telegram</strong>
       </label>
-      <label class="channel-card {% if selected_channel == 'email' %}selected{% endif %}">
+      <label class="channel-card" onclick="this.querySelector('input').checked = true">
         <input type="radio" name="owner_channel" value="email" {% if selected_channel == 'email' %}checked{% endif %}>
         <span class="material-symbols-outlined fill">mail</span>
         <strong>Email</strong>
       </label>
-      <label class="channel-card {% if selected_channel == 'whatsapp' %}selected{% endif %}">
-        <input type="radio" name="owner_channel" value="whatsapp" {% if selected_channel == 'whatsapp' %}checked{% endif %}>
+      <label class="channel-card disabled" aria-disabled="true" title="WhatsApp is not available yet">
+        <input type="radio" name="owner_channel" value="whatsapp" disabled>
         <span class="material-symbols-outlined whatsapp">forum</span>
         <strong>WhatsApp</strong>
+        <small>Not available yet</small>
       </label>
     </div>
     <div class="field-grid two-cols">

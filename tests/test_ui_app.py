@@ -48,6 +48,11 @@ def test_setup_page_uses_client_friendly_controls_and_explanations():
     assert 'Nurture window' in response.text
     assert 'Re-engage reminder' in response.text
     assert 'Message Settings' in response.text
+    assert 'value="email"' in response.text
+    assert 'value="email" disabled' not in response.text
+    assert 'value="whatsapp" disabled' in response.text
+    assert 'WhatsApp is not available yet' in response.text
+    assert 'onclick="this.querySelector(\'input\').checked = true"' in response.text
     assert 'this demo' not in response.text.lower()
     assert 'for demos' not in response.text.lower()
     assert 'manual demo' not in response.text.lower()
