@@ -1,0 +1,25 @@
+client_id: pilot_realtor
+business_name: REPLACE_WITH_BROKERAGE_NAME
+agent_name: REPLACE_WITH_AGENT_NAME
+agent_phone: "REPLACE_WITH_AGENT_PHONE"
+agent_email: REPLACE_WITH_AGENT_EMAIL
+timezone: America/New_York
+repository:
+  type: google_sheets
+  spreadsheet_id: REPLACE_WITH_GOOGLE_SHEET_ID
+  leads_sheet: Leads
+  activity_log_sheet: Activity Log
+  # Env var may contain either service-account JSON or a path to the JSON file.
+  credentials_env: GROOT_GOOGLE_SERVICE_ACCOUNT_JSON
+  # Alternative to credentials_env. Supports env expansion; keep credential files outside git.
+  # service_account_file: ${GOOGLE_APPLICATION_CREDENTIALS}
+scoring:
+  hot_timeline_days: 14
+  warm_timeline_days: 60
+  stale_after_days: 7
+messaging:
+  max_draft_chars: 700
+  required_disclaimer: "Reply STOP to opt out."
+  voice: friendly, concise, professional
+summary:
+  stale_after_days: 7

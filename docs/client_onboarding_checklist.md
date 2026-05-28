@@ -38,9 +38,11 @@ Use this checklist to configure a new real estate client for the Phase 1 MVP.
 - Relative `repository.leads_csv` and `repository.activity_log_csv` paths are resolved from the YAML config file directory.
 - For configs under `configs/`, use paths like `../data/client_leads.csv` to reference repo-level data files.
 
-## Future Google Sheets adapter
+## Google Sheets pilot setup
 
-- Create Google Cloud project and service account outside this repo
+- Create a Google Cloud project and service account outside this repo
 - Share the Google Sheet with the service account
-- Store credentials outside git
-- Add only non-secret spreadsheet IDs or config references as appropriate
+- Add `Leads` and `Activity Log` tabs using `docs/sheet_schema.md`
+- Copy `configs/pilot_realtor.example.yaml` and fill only non-secret placeholders
+- Store credentials outside git; use `repository.credentials_env` or `repository.service_account_file`
+- Follow `docs/google_sheets_setup.md` before running pilot write mode

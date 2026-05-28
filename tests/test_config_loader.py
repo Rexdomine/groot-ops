@@ -39,3 +39,33 @@ def test_relative_repository_paths_resolve_from_config_file_directory(tmp_path: 
 
     assert config.leads_csv == str((data_dir / "leads.csv").resolve())
     assert config.activity_log_csv == str((data_dir / "activity_log.csv").resolve())
+
+
+def test_load_google_sheets_config_fields(tmp_path: Path):
+    config_path = tmp_path / "client.yaml"
+    config_path.write_text(
+        "\n".join(
+            [
+                "client_id: pilot_client",
+                "business_name: Pilot Realty",
+                "agent_name: Agent",
+                "agent_phone: '555-0100'",
+                "agent_email: agent@example.invalid",
+                "repository:",
+                "  type: google_sheets",
+                "  spreadsheet_id: sheet123",
+                "  leads_sheet: Leads",
+                "  activity_log_sheet: Activity Log",
+                "  credentials_env: GROOT_GOOGLE_SERVICE_ACCOUNT_JSON",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_client_config(config_path)
+
+    assert config.repository_type == "google_sheets"
+    assert config.spreadsheet_id == "sheet123"
+    assert config.leads_sheet == "Leads"
+    assert config.activity_log_sheet == "Activity Log"
+    assert config.credentials_env == "GROOT_GOOGLE_SERVICE_ACCOUNT_JSON"

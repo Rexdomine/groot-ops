@@ -13,8 +13,14 @@ class ClientConfig:
     agent_phone: str
     agent_email: str
     timezone: str
-    leads_csv: str
-    activity_log_csv: str
+    repository_type: str = "csv"
+    leads_csv: str = ""
+    activity_log_csv: str = ""
+    spreadsheet_id: str = ""
+    leads_sheet: str = "Leads"
+    activity_log_sheet: str = "Activity Log"
+    credentials_env: str = ""
+    service_account_file: str = ""
     hot_timeline_days: int = 14
     warm_timeline_days: int = 60
     stale_after_days: int = 7

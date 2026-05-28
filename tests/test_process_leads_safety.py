@@ -34,6 +34,9 @@ CSV_HEADER = [
     "approved_by",
     "approved_at",
     "sent_at",
+    "approval_notes",
+    "sent_by",
+    "last_run_id",
 ]
 
 
@@ -183,3 +186,21 @@ def test_cli_defaults_to_dry_run_and_requires_write_for_file_updates(tmp_path: P
     assert "Mode: WRITE" in write_result.stdout
     assert _read_rows(leads_csv)[0]["approval_status"] == "needs_approval"
     assert activity_log_csv.exists()
+
+
+def test_process_leads_lead_id_and_limit_filters_only_selected_rows(tmp_path: Path):
+    first = _base_row(lead_id="L100", name="Jordan Lee")
+    second = _base_row(lead_id="L200", name="Taylor Park", timeline="120 days")
+    config_path, leads_csv, activity_log_csv = _write_config_and_csv(tmp_path, [first, second])
+
+    processed = process_leads(str(config_path), dry_run=False, lead_id="L200", limit=1)
+
+    rows = _read_rows(leads_csv)
+    assert [lead.lead_id for lead in processed] == ["L200"]
+    assert rows[0]["approval_status"] == ""
+    assert rows[0]["draft_message"] == ""
+    assert rows[1]["approval_status"] == "needs_approval"
+    assert rows[1]["last_run_id"]
+    log_text = activity_log_csv.read_text(encoding="utf-8")
+    assert "L200" in log_text
+    assert "L100" not in log_text

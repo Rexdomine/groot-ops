@@ -27,7 +27,14 @@ Only use write mode after reviewing dry-run output:
 PYTHONPATH=src python -m groot_ops.main_process_leads --client configs/sample_realtor.yaml --write
 ```
 
-Write mode updates lead scoring, draft fields, approval queue fields, and `data/activity_log.csv`.
+For pilot-safe testing, restrict processing to one lead or a small batch:
+
+```bash
+PYTHONPATH=src python -m groot_ops.main_process_leads --client configs/sample_realtor.yaml --lead-id L001
+PYTHONPATH=src python -m groot_ops.main_process_leads --client configs/sample_realtor.yaml --limit 3
+```
+
+Write mode updates lead scoring, draft fields, approval queue fields, and the configured activity log.
 
 ## Daily summary
 
@@ -46,7 +53,7 @@ The summary reports:
 
 ## Approval policy
 
-No outbound sending is implemented in Phase 1. If a future sender is added, it must call `is_send_eligible(lead)` and only proceed when:
+No outbound sending is implemented in Phase 1.5. Operators manually review generated copy and manually send outside Groot Ops. If a future sender is added, it must call `is_send_eligible(lead)` and only proceed when:
 
 - `approval_status` is `approved`
 - `draft_message` is present and non-empty

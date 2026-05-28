@@ -4,11 +4,11 @@ import argparse
 
 from .approval_queue import apply_approval_gate
 from .config_loader import load_client_config
-from .csv_repository import CsvLeadRepository
 from .daily_summary import build_daily_summary, format_daily_summary
 from .lead_scorer import score_lead
 from .message_drafter import draft_followup, validate_draft
 from .models import Lead
+from .repository_factory import create_lead_repository
 
 
 def _enrich_for_summary(leads: list[Lead], config) -> list[Lead]:
@@ -33,7 +33,7 @@ def _enrich_for_summary(leads: list[Lead], config) -> list[Lead]:
 
 def run_daily_summary(client_config_path: str) -> str:
     config = load_client_config(client_config_path)
-    leads = _enrich_for_summary(CsvLeadRepository(config.leads_csv).list_leads(), config)
+    leads = _enrich_for_summary(create_lead_repository(config).list_leads(), config)
     summary = build_daily_summary(leads, config)
     output = format_daily_summary(summary)
     print(output)

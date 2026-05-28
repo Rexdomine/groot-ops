@@ -1,6 +1,6 @@
 # Sheet Schema
 
-The Phase 1 CSV file is the source of truth and is compatible with a future Google Sheets tab. Use one row per lead.
+The lead repository can be either CSV or Google Sheets. Both use the same columns; use one row per lead.
 
 ## Required identity fields
 
@@ -27,7 +27,7 @@ The Phase 1 CSV file is the source of truth and is compatible with a future Goog
 - `approval_status`: Blank, `needs_approval`, `approved`, `rejected`, or `blocked`
 - `draft_message`: Internal draft for human review
 - `recommended_action`: Internal next-step recommendation
-- Optional approval metadata such as `approved_by`, `approved_at`, and `sent_at` is cleared when automation regenerates draft copy that no longer matches the approved draft.
+- Optional approval metadata such as `approved_by`, `approved_at`, `sent_at`, `approval_notes`, and `sent_by` is cleared when automation regenerates draft copy that no longer matches the approved draft.
 
 ## Automation output fields
 
@@ -35,6 +35,7 @@ The Phase 1 CSV file is the source of truth and is compatible with a future Goog
 - `lead_temperature`: `hot`, `warm`, `cold`, or `needs_info`
 - `errors`: Semicolon-delimited data quality or draft validation issues
 - `updated_at`: ISO timestamp when Groot Ops last processed the row
+- `last_run_id`: Internal run UUID for the most recent processing run that touched the row
 
 ## Notes
 
