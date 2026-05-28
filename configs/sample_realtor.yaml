@@ -1,0 +1,20 @@
+client_id: sample_realtor
+business_name: Evergreen Realty Group
+agent_name: Maya Patel
+agent_phone: "555-010-2020"
+agent_email: maya@example.invalid
+timezone: America/New_York
+repository:
+  type: csv
+  leads_csv: ../data/sample_leads.csv
+  activity_log_csv: ../data/activity_log.csv
+scoring:
+  hot_timeline_days: 14
+  warm_timeline_days: 60
+  stale_after_days: 7
+messaging:
+  max_draft_chars: 700
+  required_disclaimer: "Reply STOP to opt out."
+  voice: friendly, concise, professional
+summary:
+  stale_after_days: 7
