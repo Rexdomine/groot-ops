@@ -40,9 +40,21 @@ Use this checklist to configure a new real estate client for the Phase 1 MVP.
 
 ## Google Sheets pilot setup
 
-- Create a Google Cloud project and service account outside this repo
-- Share the Google Sheet with the service account
 - Add `Leads` and `Activity Log` tabs using `docs/sheet_schema.md`
-- Copy `configs/pilot_realtor.example.yaml` and fill only non-secret placeholders
+- Copy `configs/client.example.yaml` or `configs/pilot_realtor.example.yaml` to `configs/<client>.local.yaml`
+- Fill only non-secret placeholders in the config; keep private sheet IDs and client-specific files untracked when appropriate
+- For Rex/Hermes pilots, use `repository.credentials_env: MATON_API_KEY`
+- For native Google access, create a Google Cloud project and service account outside this repo, then share the Sheet with the service account email
 - Store credentials outside git; use `repository.credentials_env` or `repository.service_account_file`
 - Follow `docs/google_sheets_setup.md` before running pilot write mode
+
+## Phase 1.5 production readiness gate
+
+Before Phase 2 scheduling or a real client pilot:
+
+- Run `python -m pytest -q`
+- Run `python scripts/production_readiness_check.py`
+- Confirm `.env`, service-account JSON, and `configs/*.local.yaml` are not staged
+- Run the pilot-safe sequence: daily summary, one-row dry-run, small-batch dry-run, one-row write, small-batch write
+- Confirm Activity Log rows are appended only in write mode
+- Confirm the client understands that Phase 1.5 creates drafts/recommendations only and does not auto-send messages
