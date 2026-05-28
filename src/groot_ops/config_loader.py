@@ -29,10 +29,42 @@ def load_client_config(path: str | Path) -> ClientConfig:
     missing = [key for key in required if not raw.get(key)]
     if missing:
         raise ValueError(f"Missing required client config fields: {', '.join(missing)}")
-    if repository.get("type", "csv") != "csv":
-        raise ValueError("Phase 1 MVP supports repository.type=csv only")
-    if not repository.get("leads_csv"):
-        raise ValueError("Missing repository.leads_csv")
+    repository_type = repository.get("type", "csv")
+    if repository_type not in {"csv", "google_sheets"}:
+        raise ValueError("repository.type must be one of: csv, google_sheets")
+
+    leads_csv = ""
+    activity_log_csv = ""
+    spreadsheet_id = ""
+    leads_sheet = "Leads"
+    activity_log_sheet = "Activity Log"
+    credentials_env = ""
+    service_account_file = ""
+
+    if repository_type == "csv":
+        if not repository.get("leads_csv"):
+            raise ValueError("Missing repository.leads_csv")
+        leads_csv = _resolve_path(config_path, repository["leads_csv"])
+        activity_log_csv = _resolve_path(config_path, repository.get("activity_log_csv", "../data/activity_log.csv"))
+    else:
+        spreadsheet_id = str(repository.get("spreadsheet_id") or "")
+        if not spreadsheet_id or spreadsheet_id.startswith("REPLACE_"):
+            raise ValueError("Missing repository.spreadsheet_id for google_sheets repository")
+        leads_sheet = str(repository.get("leads_sheet") or leads_sheet)
+        activity_log_sheet = str(repository.get("activity_log_sheet") or activity_log_sheet)
+        credentials_env = str(repository.get("credentials_env") or "")
+        service_account_file_raw = str(repository.get("service_account_file") or "")
+        service_account_file = (
+            _resolve_path(config_path, service_account_file_raw)
+            if service_account_file_raw
+            and not service_account_file_raw.startswith("$")
+            and not service_account_file_raw.startswith("~")
+            else service_account_file_raw
+        )
+        if not credentials_env and not service_account_file:
+            raise ValueError(
+                "Google Sheets repository requires repository.credentials_env or repository.service_account_file"
+            )
 
     return ClientConfig(
         client_id=raw["client_id"],
@@ -41,8 +73,14 @@ def load_client_config(path: str | Path) -> ClientConfig:
         agent_phone=str(raw["agent_phone"]),
         agent_email=raw["agent_email"],
         timezone=raw.get("timezone", "UTC"),
-        leads_csv=_resolve_path(config_path, repository["leads_csv"]),
-        activity_log_csv=_resolve_path(config_path, repository.get("activity_log_csv", "../data/activity_log.csv")),
+        repository_type=repository_type,
+        leads_csv=leads_csv,
+        activity_log_csv=activity_log_csv,
+        spreadsheet_id=spreadsheet_id,
+        leads_sheet=leads_sheet,
+        activity_log_sheet=activity_log_sheet,
+        credentials_env=credentials_env,
+        service_account_file=service_account_file,
         hot_timeline_days=int(scoring.get("hot_timeline_days", 14)),
         warm_timeline_days=int(scoring.get("warm_timeline_days", 60)),
         stale_after_days=int(summary.get("stale_after_days", scoring.get("stale_after_days", 7))),

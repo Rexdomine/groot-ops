@@ -10,7 +10,7 @@ REJECTED = "rejected"
 
 def _clear_approval_metadata(lead: Lead) -> None:
     """Remove fields that imply a human approved or sent the current draft."""
-    for field_name in ("approved_by", "approved_at", "sent_at"):
+    for field_name in ("approved_by", "approved_at", "sent_at", "approval_notes", "sent_by"):
         if hasattr(lead, field_name):
             setattr(lead, field_name, "")
         if field_name in lead.extra:

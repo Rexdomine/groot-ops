@@ -28,12 +28,22 @@ DEFAULT_FIELDS = [
     "lead_temperature",
     "errors",
     "updated_at",
+    "approved_by",
+    "approved_at",
+    "sent_at",
+    "approval_notes",
+    "sent_by",
+    "last_run_id",
 ]
 
 
 class CsvLeadRepository:
     def __init__(self, path: str | Path):
         self.path = Path(path)
+
+    @property
+    def label(self) -> str:
+        return str(self.path)
 
     def list_leads(self) -> list[Lead]:
         if not self.path.exists():
