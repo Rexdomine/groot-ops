@@ -12,6 +12,21 @@ def test_health_route():
     assert response.json()["status"] == "ok"
 
 
+def test_setup_page_uses_client_friendly_controls_and_explanations():
+    client = TestClient(create_app())
+
+    response = client.get("/setup")
+
+    assert response.status_code == 200
+    assert '<select name="timezone"' in response.text
+    assert '<input type="time" name="daily_summary_time"' in response.text
+    assert 'Hot leads: people likely to move soon' in response.text
+    assert 'Warm leads: interested, but not urgent yet' in response.text
+    assert 'Stale leads: no recent response' in response.text
+    assert 'What these fields mean' in response.text
+    assert 'Recommended default' in response.text
+
+
 def test_setup_saves_demo_config_and_shows_dashboard_link(monkeypatch, tmp_path):
     monkeypatch.setenv("GROOT_OPS_DEMO_CONFIG_DIR", str(tmp_path))
     monkeypatch.delenv("MATON_API_KEY", raising=False)
