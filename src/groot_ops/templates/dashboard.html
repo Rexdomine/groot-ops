@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}{{ config.business_name }} Dashboard{% endblock %}
+{% block content %}
+<section class="page-head dashboard-head">
+  <div>
+    <p class="eyebrow">Demo dashboard</p>
+    <h1>{{ config.business_name }}</h1>
+    <p class="lede">{{ config.agent_name }} · {{ config.owner_notification_channel|title }} notifications · {{ config.automation_status.replace('_', ' ')|title }}</p>
+  </div>
+  <a class="button" href="/setup">New setup</a>
+</section>
+
+<section class="cards">
+  <div class="card"><span>New leads</span><strong>{{ cards.new }}</strong></div>
+  <div class="card hot"><span>Hot leads</span><strong>{{ cards.hot }}</strong></div>
+  <div class="card"><span>Needs approval</span><strong>{{ cards.needs_approval }}</strong></div>
+  <div class="card"><span>Stale leads</span><strong>{{ cards.stale }}</strong></div>
+</section>
+
+<section class="grid two">
+  <div class="panel">
+    <h2>Preview actions</h2>
+    <p>These actions are safe for demos. No automatic customer messages are sent; previews only show summaries and draft follow-ups.</p>
+    <form method="post" action="/clients/{{ config.client_id }}/preview-summary"><button class="button primary" type="submit">Run daily summary preview</button></form>
+    <form class="inline-form" method="post" action="/clients/{{ config.client_id }}/preview-leads"><input type="number" name="limit" value="3" min="1" max="10"><button class="button" type="submit">Preview lead drafts</button></form>
+    <div class="safety-note"><strong>Activation:</strong> Rex/operator turns on Hermes scheduling after the client approves the pilot settings.</div>
+  </div>
+  <div class="panel">
+    <h2>Setup health</h2>
+    <div class="checks compact">
+      {% for check in checks %}<div class="check {{ check.status }}"><strong>{{ check.label }}</strong><span>{{ check.message }}</span></div>{% endfor %}
+    </div>
+  </div>
+</section>
+
+{% if summary %}<section class="panel"><h2>Today’s Owner Summary</h2><pre>{{ summary }}</pre></section>{% endif %}
+{% if preview %}<section class="panel"><h2>3-Lead Follow-Up Preview</h2><pre>{{ preview }}</pre></section>{% endif %}
+
+<section class="panel">
+  <h2>Lead Queue</h2>
+  {% if lead_error %}<p class="warning">Could not load live leads yet: {{ lead_error }}</p>{% endif %}
+  {% if leads %}
+  <div class="lead-list">
+    {% for lead in leads %}
+      <article class="lead">
+        <div><strong>{{ lead.name or 'Unnamed lead' }}</strong><span>{{ lead.lead_id }}</span></div>
+        <div class="pill {{ lead.lead_temperature or 'new' }}">{{ lead.lead_temperature or 'new' }}</div>
+        <p>{{ lead.recommended_action or 'Run preview to generate recommended action.' }}</p>
+        {% if lead.draft_message %}<blockquote>{{ lead.draft_message }}</blockquote>{% endif %}
+      </article>
+    {% endfor %}
+  </div>
+  {% else %}<p>No leads to show yet. Validate the connected Google Sheet or run with sample data locally.</p>{% endif %}
+</section>
+
+<section class="panel schedule">
+  <h2>Automation Schedule</h2>
+  <p><strong>Daily summary:</strong> {{ config.daily_summary_time }} · <strong>Processing:</strong> {{ config.process_leads_frequency.replace('_', ' ') }}</p>
+  <p><strong>Config:</strong> <code>{{ config_path }}</code></p>
+</section>
+{% endblock %}

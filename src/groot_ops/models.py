@@ -27,6 +27,11 @@ class ClientConfig:
     max_draft_chars: int = 700
     required_disclaimer: str = "Reply STOP to opt out."
     voice: str = "friendly, concise, professional"
+    owner_notification_channel: str = "telegram"
+    owner_notification_destination: str = ""
+    daily_summary_time: str = "08:30"
+    process_leads_frequency: str = "every_2h_weekdays"
+    automation_status: str = "demo_manual"
 
 
 @dataclass
