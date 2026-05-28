@@ -24,3 +24,4 @@ configs/*private*.yaml
 
 # Generated local activity logs
 data/activity_log.csv
+.vercel
