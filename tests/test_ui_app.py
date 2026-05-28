@@ -12,6 +12,21 @@ def test_health_route():
     assert response.json()["status"] == "ok"
 
 
+def test_homepage_uses_stitch_inspired_production_sections():
+    client = TestClient(create_app())
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert "Turn real estate leads into daily follow-up action." in response.text
+    assert "Daily Pulse" in response.text
+    assert "Human approval stays in control." in response.text
+    assert "Ready to stop losing leads?" in response.text
+    assert "What Groot handles" in response.text
+    assert "this demo" not in response.text.lower()
+    assert "for demos" not in response.text.lower()
+
+
 def test_setup_page_uses_client_friendly_controls_and_explanations():
     client = TestClient(create_app())
 
@@ -20,6 +35,9 @@ def test_setup_page_uses_client_friendly_controls_and_explanations():
     assert response.status_code == 200
     assert '<select name="timezone"' in response.text
     assert '<input type="time" name="daily_summary_time"' in response.text
+    assert 'Setup Health' in response.text
+    assert '1 of 5 steps completed' in response.text
+    assert 'Guided setup, not a technical form.' in response.text
     assert 'What these fields mean' in response.text
     assert 'Recommended default' in response.text
     assert 'When should a lead become urgent?' in response.text
@@ -29,6 +47,7 @@ def test_setup_page_uses_client_friendly_controls_and_explanations():
     assert 'Urgent lead window' in response.text
     assert 'Nurture window' in response.text
     assert 'Re-engage reminder' in response.text
+    assert 'Message Settings' in response.text
     assert 'this demo' not in response.text.lower()
     assert 'for demos' not in response.text.lower()
     assert 'manual demo' not in response.text.lower()

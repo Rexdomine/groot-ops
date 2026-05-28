@@ -1,29 +1,99 @@
 {% extends "base.html" %}
-{% block title %}Groot Ops Lead Follow-Up Console{% endblock %}
+{% block title %}Groot Ops — AI Lead Follow-Up for Real Estate{% endblock %}
 {% block content %}
-<section class="hero">
-  <div>
-    <p class="eyebrow">AI lead follow-up for real estate agents</p>
-    <h1>Connect your lead sheet. See urgent leads. Approve smart follow-ups.</h1>
-    <p class="lede">Groot Ops helps agents follow up faster without replacing their current Google Sheet workflow.</p>
-    <div class="actions">
-      <a class="button primary" href="/setup">Start setup</a>
-      {% if configs %}<a class="button" href="/clients/{{ configs[0].stem }}/dashboard">Open latest dashboard</a>{% endif %}
+<section class="home-hero mesh-bg">
+  <div class="hero-copy">
+    <p class="eyebrow">AI follow-up operations for real estate teams</p>
+    <h1>Turn real estate leads into daily follow-up action.</h1>
+    <p class="lede">Groot Ops watches your lead sheet, prioritizes the people who need attention, and prepares follow-up drafts your team can approve before anything is sent.</p>
+    <div class="actions center-actions">
+      <a class="button primary large" href="/setup">Start setup</a>
+      {% if configs %}
+        <a class="button secondary large" href="/clients/{{ configs[0].stem }}/dashboard">View lead dashboard</a>
+      {% else %}
+        <a class="button secondary large" href="/setup">View lead dashboard</a>
+      {% endif %}
     </div>
   </div>
-  <div class="hero-card">
-    <h2>What Groot Ops handles</h2>
-    <ul class="clean-list">
-      <li>✅ Google Sheets as the lead source</li>
-      <li>✅ Telegram/email owner notification preference</li>
-      <li>✅ Daily owner summary</li>
-      <li>✅ Follow-up draft previews</li>
-      <li>🛡️ No automatic customer messages without human approval</li>
-    </ul>
+</section>
+
+<section class="dashboard-preview" id="product" aria-label="Daily Pulse dashboard preview">
+  <div class="preview-shell">
+    <div class="preview-head">
+      <h2>Daily Pulse</h2>
+      <span class="live-pill"><span class="material-symbols-outlined">sync</span> Live</span>
+    </div>
+    <div class="metric-grid">
+      <article class="metric-card urgent">
+        <div class="metric-label"><span class="material-symbols-outlined fill">local_fire_department</span> Urgent Leads</div>
+        <strong>3</strong>
+        <p>Require immediate action</p>
+      </article>
+      <article class="metric-card warm">
+        <div class="metric-label"><span class="material-symbols-outlined">wb_sunny</span> Warm Leads</div>
+        <strong>12</strong>
+        <p>Active conversations</p>
+      </article>
+      <article class="metric-card reengage">
+        <div class="metric-label"><span class="material-symbols-outlined">history</span> Needs Re-engagement</div>
+        <strong>5</strong>
+        <p>Drafts prepared</p>
+      </article>
+      <article class="metric-card summary">
+        <div class="metric-label"><span class="material-symbols-outlined">summarize</span> Daily Summary</div>
+        <strong>Ready</strong>
+        <p>Review your agenda</p>
+      </article>
+    </div>
   </div>
 </section>
+
+<section class="section-block how-section" id="how-it-works">
+  <div class="section-heading">
+    <h2>How it works</h2>
+    <p>Three steps to elite lead nurturing.</p>
+  </div>
+  <div class="process-grid">
+    <article>
+      <span class="process-icon material-symbols-outlined">table_chart</span>
+      <h3>1. Connect Sheet</h3>
+      <p>Link your existing Google Sheet or CRM export.</p>
+    </article>
+    <article>
+      <span class="process-icon material-symbols-outlined">auto_awesome</span>
+      <h3>2. Groot Prioritizes</h3>
+      <p>Groot analyzes engagement and surfaces the best opportunities.</p>
+    </article>
+    <article>
+      <span class="process-icon material-symbols-outlined">fact_check</span>
+      <h3>3. Review & Approve</h3>
+      <p>Approve personalized follow-up drafts before anything goes out.</p>
+    </article>
+  </div>
+</section>
+
+<section class="section-block split-benefits">
+  <div class="panel premium-panel">
+    <p class="eyebrow">What Groot handles</p>
+    <h2>Less spreadsheet chasing. More timely conversations.</h2>
+    <div class="feature-list">
+      <div><span class="material-symbols-outlined">dataset</span><strong>Google Sheets lead source</strong><p>Keep the workflow realtors already use.</p></div>
+      <div><span class="material-symbols-outlined">notifications_active</span><strong>Daily owner summary</strong><p>Start the day with a clean action list.</p></div>
+      <div><span class="material-symbols-outlined">priority_high</span><strong>Lead priority recommendations</strong><p>Know who is urgent, warm, or overdue.</p></div>
+      <div><span class="material-symbols-outlined">edit_note</span><strong>Follow-up draft previews</strong><p>Review natural, ready-to-send messages.</p></div>
+      <div><span class="material-symbols-outlined">history</span><strong>Re-engagement reminders</strong><p>Catch leads before they go cold.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="trust-card">
+  <span class="material-symbols-outlined trust-icon">shield_person</span>
+  <h2>Human approval stays in control.</h2>
+  <p>Groot prepares drafts and summaries, but nothing sends to customers without explicit human review and approval.</p>
+</section>
+
 {% if configs %}
-<section class="panel">
+<section class="panel recent-clients">
   <h2>Recent clients</h2>
   <div class="client-list">
     {% for config in configs %}
@@ -32,4 +102,9 @@
   </div>
 </section>
 {% endif %}
+
+<section class="final-cta">
+  <h2>Ready to stop losing leads?</h2>
+  <a class="button primary jumbo" href="/setup">Set up Groot Ops</a>
+</section>
 {% endblock %}

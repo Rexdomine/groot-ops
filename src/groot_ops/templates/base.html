@@ -4,15 +4,39 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Groot Ops{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Material+Symbols+Outlined:wght@300..700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="/">🌱 Groot Ops</a>
-    <nav>
-      <a href="/setup">Setup</a>
-    </nav>
+    <div class="topbar-inner">
+      <a class="brand" href="/" aria-label="Groot Ops home">
+        <span class="brand-mark">G</span>
+        <span>Groot Ops</span>
+      </a>
+      <nav class="main-nav" aria-label="Primary navigation">
+        <a href="/#product">Product</a>
+        <a href="/#how-it-works">How it works</a>
+        <a href="/setup">Setup</a>
+        {% if configs %}<a href="/clients/{{ configs[0].stem }}/dashboard">Dashboard</a>{% endif %}
+      </nav>
+      <a class="nav-cta" href="/setup">Start setup</a>
+    </div>
   </header>
   <main>{% block content %}{% endblock %}</main>
+  <footer class="site-footer">
+    <div>
+      <strong>Groot Ops</strong>
+      <p>© 2026 Groot Ops AI. Elite real estate lead nurturing.</p>
+    </div>
+    <nav aria-label="Footer navigation">
+      <a href="/#product">Product</a>
+      <a href="/#how-it-works">How it works</a>
+      <a href="/setup">Setup</a>
+      <a href="mailto:support@grootops.ai">Contact Support</a>
+    </nav>
+  </footer>
 </body>
 </html>
