@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import urllib.parse
+import urllib.request
 from typing import Any, Protocol
 
 from .csv_repository import DEFAULT_FIELDS
@@ -16,6 +18,80 @@ class GoogleSheetsValuesClient(Protocol):
     def get(self, **kwargs: Any) -> Any: ...
     def update(self, **kwargs: Any) -> Any: ...
     def append(self, **kwargs: Any) -> Any: ...
+
+
+class _MatonExecute:
+    def __init__(self, payload: dict[str, Any]) -> None:
+        self.payload = payload
+
+    def execute(self) -> dict[str, Any]:
+        return self.payload
+
+
+class MatonGoogleSheetsValuesClient:
+    """Small Google Sheets values client backed by Maton's Google Sheets proxy."""
+
+    def __init__(self, api_key: str) -> None:
+        self.api_key = api_key
+        self.base_url = "https://api.maton.ai/google-sheets/v4/spreadsheets"
+
+    def _request(self, method: str, url: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
+        data = None if body is None else json.dumps(body).encode("utf-8")
+        request = urllib.request.Request(
+            url,
+            data=data,
+            method=method,
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+            },
+        )
+        with urllib.request.urlopen(request, timeout=60) as response:
+            payload = response.read().decode("utf-8")
+            return json.loads(payload) if payload else {}
+
+    def _range_url(self, spreadsheet_id: str, range_name: str, suffix: str = "") -> str:
+        encoded_range = urllib.parse.quote(range_name, safe="")
+        return f"{self.base_url}/{spreadsheet_id}/values/{encoded_range}{suffix}"
+
+    def get(self, **kwargs: Any) -> _MatonExecute:
+        spreadsheet_id = kwargs["spreadsheetId"]
+        range_name = kwargs["range"]
+        payload = self._request("GET", self._range_url(spreadsheet_id, range_name))
+        return _MatonExecute(payload)
+
+    def update(self, **kwargs: Any) -> _MatonExecute:
+        spreadsheet_id = kwargs["spreadsheetId"]
+        range_name = kwargs["range"]
+        value_input_option = kwargs.get("valueInputOption", "RAW")
+        body = kwargs.get("body") or {}
+        suffix = f"?valueInputOption={urllib.parse.quote(str(value_input_option), safe='')}"
+        payload = self._request("PUT", self._range_url(spreadsheet_id, range_name, suffix), body)
+        return _MatonExecute(payload)
+
+    def append(self, **kwargs: Any) -> _MatonExecute:
+        spreadsheet_id = kwargs["spreadsheetId"]
+        range_name = kwargs["range"]
+        value_input_option = kwargs.get("valueInputOption", "RAW")
+        insert_data_option = kwargs.get("insertDataOption", "INSERT_ROWS")
+        body = kwargs.get("body") or {}
+        query = urllib.parse.urlencode(
+            {"valueInputOption": value_input_option, "insertDataOption": insert_data_option}
+        )
+        payload = self._request("POST", self._range_url(spreadsheet_id, range_name, f":append?{query}"), body)
+        return _MatonExecute(payload)
+
+
+class MatonGoogleSheetsService:
+    def __init__(self, api_key: str) -> None:
+        self._values = MatonGoogleSheetsValuesClient(api_key)
+
+    def spreadsheets(self) -> "MatonGoogleSheetsService":
+        return self
+
+    def values(self) -> MatonGoogleSheetsValuesClient:
+        return self._values
 
 
 class GoogleSheetsLeadRepository:
@@ -54,6 +130,13 @@ class GoogleSheetsLeadRepository:
         return client.spreadsheets().values()
 
     def _build_client(self) -> Any:
+        if self.credentials_env == "MATON_API_KEY":
+            api_key = os.environ.get("MATON_API_KEY", "")
+            if not api_key:
+                raise GoogleSheetsConfigurationError("MATON_API_KEY is not set for Maton Google Sheets access.")
+            self._client = MatonGoogleSheetsService(api_key)
+            return self._client
+
         try:
             from google.oauth2 import service_account  # type: ignore
             from googleapiclient.discovery import build  # type: ignore

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from groot_ops.config_loader import load_client_config
-from groot_ops.google_sheets_repository import GoogleSheetsLeadRepository
+from groot_ops.google_sheets_repository import GoogleSheetsLeadRepository, MatonGoogleSheetsValuesClient
 from groot_ops.main_process_leads import process_leads
 from groot_ops.repository_factory import create_lead_repository
 
@@ -55,6 +55,38 @@ class FakeClient:
     def spreadsheets(self):
         return FakeSheets(self._values)
 
+
+def test_maton_values_client_uses_google_sheets_proxy_endpoints(monkeypatch):
+    client = MatonGoogleSheetsValuesClient("test-api-key")
+    calls = []
+
+    def fake_request(method, url, body=None):
+        calls.append((method, url, body))
+        return {"values": [["lead_id"], ["L1"]]}
+
+    monkeypatch.setattr(client, "_request", fake_request)
+
+    assert client.get(spreadsheetId="sheet123", range="Leads!A1:B2").execute()["values"][1][0] == "L1"
+    client.update(
+        spreadsheetId="sheet123",
+        range="Leads!A1",
+        valueInputOption="RAW",
+        body={"values": [["lead_id"], ["L1"]]},
+    ).execute()
+    client.append(
+        spreadsheetId="sheet123",
+        range="Activity Log!A1",
+        valueInputOption="RAW",
+        insertDataOption="INSERT_ROWS",
+        body={"values": [["now", "lead_processed", "L1", "hot"]]},
+    ).execute()
+
+    assert calls[0][0] == "GET"
+    assert calls[0][1] == "https://api.maton.ai/google-sheets/v4/spreadsheets/sheet123/values/Leads%21A1%3AB2"
+    assert calls[1][0] == "PUT"
+    assert calls[1][1].endswith("/values/Leads%21A1?valueInputOption=RAW")
+    assert calls[2][0] == "POST"
+    assert "/values/Activity%20Log%21A1:append?" in calls[2][1]
 
 def test_google_sheets_repository_read_write_and_activity_dry_run():
     values = FakeValues()
