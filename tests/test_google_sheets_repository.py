@@ -114,6 +114,78 @@ def test_google_sheets_repository_read_write_and_activity_dry_run():
     assert values.appended[0]["range"] == "Activity Log!A1"
 
 
+def test_google_sheets_repository_maps_realtor_headers_without_sheet_reformatting():
+    values = FakeValues()
+    values.values = [
+        ["Client Name", "WhatsApp Number", "Email Address", "Price Range", "Preferred Area", "Move-in Timeline", "Inquiry Notes"],
+        ["Amara Okafor", "+2348012345678", "amara@example.com", "$300k-$450k", "Lekki Phase 1", "30 days", "Needs a 3-bedroom apartment"],
+    ]
+    repo = GoogleSheetsLeadRepository(
+        spreadsheet_id="sheet123",
+        leads_sheet="Leads",
+        activity_log_sheet="Activity Log",
+        client=FakeClient(values),
+    )
+
+    leads = repo.list_leads()
+
+    assert leads[0].lead_id == "amara_okafor"
+    assert leads[0].name == "Amara Okafor"
+    assert leads[0].phone == "+2348012345678"
+    assert leads[0].email == "amara@example.com"
+    assert leads[0].budget == "$300k-$450k"
+    assert leads[0].desired_location == "Lekki Phase 1"
+    assert leads[0].timeline == "30 days"
+    assert leads[0].message == "Needs a 3-bedroom apartment"
+    assert leads[0].extra["original_Client Name"] == "Amara Okafor"
+
+
+def test_google_sheets_repository_honors_saved_column_mapping():
+    values = FakeValues()
+    values.values = [
+        ["Customer", "Mobile", "Custom Lead ID", "Notes"],
+        ["Jordan Lee", "555-0101", "CRM-77", "Wants a duplex"],
+    ]
+    repo = GoogleSheetsLeadRepository(
+        spreadsheet_id="sheet123",
+        leads_sheet="Leads",
+        activity_log_sheet="Activity Log",
+        column_mapping={"name": "Customer", "phone": "Mobile", "lead_id": "Custom Lead ID", "message": "Notes"},
+        client=FakeClient(values),
+    )
+
+    lead = repo.list_leads()[0]
+
+    assert lead.lead_id == "CRM-77"
+    assert lead.name == "Jordan Lee"
+    assert lead.phone == "555-0101"
+    assert lead.message == "Wants a duplex"
+
+
+def test_google_sheets_repository_preserves_original_headers_when_saving_mapped_leads():
+    values = FakeValues()
+    values.values = [
+        ["Client Name", "WhatsApp Number", "Move-in Timeline"],
+        ["Amara Okafor", "+2348012345678", "30 days"],
+    ]
+    repo = GoogleSheetsLeadRepository(
+        spreadsheet_id="sheet123",
+        leads_sheet="Leads",
+        activity_log_sheet="Activity Log",
+        client=FakeClient(values),
+    )
+    leads = repo.list_leads()
+    leads[0].lead_temperature = "hot"
+
+    repo.save_leads(leads)
+
+    saved_headers = values.updated[0]["body"]["values"][0]
+    saved_row = values.updated[0]["body"]["values"][1]
+    assert saved_headers[:3] == ["Client Name", "WhatsApp Number", "Move-in Timeline"]
+    assert saved_row[:3] == ["Amara Okafor", "+2348012345678", "30 days"]
+    assert "lead_temperature" in saved_headers
+
+
 def test_repository_factory_selects_google_sheets(tmp_path):
     config_path = tmp_path / "client.yaml"
     config_path.write_text(

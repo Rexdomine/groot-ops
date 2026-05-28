@@ -1,61 +1,135 @@
 {% extends "base.html" %}
 {% block title %}{{ config.business_name }} Dashboard{% endblock %}
 {% block content %}
-<section class="page-head dashboard-head">
-  <div>
-    <p class="eyebrow">Demo dashboard</p>
-    <h1>{{ config.business_name }}</h1>
-    <p class="lede">{{ config.agent_name }} · {{ config.owner_notification_channel|title }} notifications · {{ config.automation_status.replace('_', ' ')|title }}</p>
-  </div>
-  <a class="button" href="/setup">New setup</a>
-</section>
-
-<section class="cards">
-  <div class="card"><span>New leads</span><strong>{{ cards.new }}</strong></div>
-  <div class="card hot"><span>Hot leads</span><strong>{{ cards.hot }}</strong></div>
-  <div class="card"><span>Needs approval</span><strong>{{ cards.needs_approval }}</strong></div>
-  <div class="card"><span>Stale leads</span><strong>{{ cards.stale }}</strong></div>
-</section>
-
-<section class="grid two">
-  <div class="panel">
-    <h2>Preview actions</h2>
-    <p>These actions are safe for demos. No automatic customer messages are sent; previews only show summaries and draft follow-ups.</p>
-    <form method="post" action="/clients/{{ config.client_id }}/preview-summary"><button class="button primary" type="submit">Run daily summary preview</button></form>
-    <form class="inline-form" method="post" action="/clients/{{ config.client_id }}/preview-leads"><input type="number" name="limit" value="3" min="1" max="10"><button class="button" type="submit">Preview lead drafts</button></form>
-    <div class="safety-note"><strong>Activation:</strong> Rex/operator turns on Hermes scheduling after the client approves the pilot settings.</div>
-  </div>
-  <div class="panel">
-    <h2>Setup health</h2>
-    <div class="checks compact">
-      {% for check in checks %}<div class="check {{ check.status }}"><strong>{{ check.label }}</strong><span>{{ check.message }}</span></div>{% endfor %}
+<section class="dashboard-wrap">
+  <header class="dashboard-hero">
+    <div>
+      <p class="eyebrow">Lead Follow-Up Dashboard</p>
+      <h1>{{ config.business_name }}</h1>
+      <div class="dashboard-meta">
+        <span>{{ config.agent_name }}</span>
+        <span>·</span>
+        <span>{{ config.owner_notification_channel|title }} notifications</span>
+        <span>·</span>
+        <span>{{ config.process_leads_frequency.replace('_', ' ')|title }}</span>
+        <span class="status-badge ok"><span class="material-symbols-outlined">check_circle</span> Setup active</span>
+      </div>
     </div>
-  </div>
-</section>
+    <a class="button secondary" href="/setup">New setup</a>
+  </header>
 
-{% if summary %}<section class="panel"><h2>Today’s Owner Summary</h2><pre>{{ summary }}</pre></section>{% endif %}
-{% if preview %}<section class="panel"><h2>3-Lead Follow-Up Preview</h2><pre>{{ preview }}</pre></section>{% endif %}
+  <section class="dashboard-link-card" aria-label="Return to this dashboard">
+    <div>
+      <strong>Save this dashboard link</strong>
+      <p>No login is required yet. Bookmark this client-specific link or share it with the operator who needs to return to this dashboard.</p>
+    </div>
+    <code>{{ dashboard_path }}</code>
+  </section>
 
-<section class="panel">
-  <h2>Lead Queue</h2>
-  {% if lead_error %}<p class="warning">Could not load live leads yet: {{ lead_error }}</p>{% endif %}
-  {% if leads %}
-  <div class="lead-list">
-    {% for lead in leads %}
-      <article class="lead">
-        <div><strong>{{ lead.name or 'Unnamed lead' }}</strong><span>{{ lead.lead_id }}</span></div>
-        <div class="pill {{ lead.lead_temperature or 'new' }}">{{ lead.lead_temperature or 'new' }}</div>
-        <p>{{ lead.recommended_action or 'Run preview to generate recommended action.' }}</p>
-        {% if lead.draft_message %}<blockquote>{{ lead.draft_message }}</blockquote>{% endif %}
-      </article>
-    {% endfor %}
-  </div>
-  {% else %}<p>No leads to show yet. Validate the connected Google Sheet or run with sample data locally.</p>{% endif %}
-</section>
+  <section class="dashboard-kpis" aria-label="Lead metrics">
+    <article class="kpi-card">
+      <div><span class="kpi-icon material-symbols-outlined">person_add</span><strong>{{ cards.new }}</strong></div>
+      <h2>New Leads</h2>
+      <p>Fresh leads captured from the sheet</p>
+    </article>
+    <article class="kpi-card hot">
+      <div><span class="kpi-icon material-symbols-outlined fill">local_fire_department</span><strong>{{ cards.hot }}</strong></div>
+      <h2>Hot Leads</h2>
+      <p>High-intent leads needing fast follow-up</p>
+    </article>
+    <article class="kpi-card">
+      <div><span class="kpi-icon material-symbols-outlined">approval_delegation</span><strong>{{ cards.needs_approval }}</strong></div>
+      <h2>Needs Approval</h2>
+      <p>Drafts waiting for human review</p>
+    </article>
+    <article class="kpi-card">
+      <div><span class="kpi-icon material-symbols-outlined">hourglass_empty</span><strong>{{ cards.stale }}</strong></div>
+      <h2>Stale Leads</h2>
+      <p>Leads overdue for re-engagement</p>
+    </article>
+  </section>
 
-<section class="panel schedule">
-  <h2>Automation Schedule</h2>
-  <p><strong>Daily summary:</strong> {{ config.daily_summary_time }} · <strong>Processing:</strong> {{ config.process_leads_frequency.replace('_', ' ') }}</p>
-  <p><strong>Config:</strong> <code>{{ config_path }}</code></p>
+  <section class="dashboard-grid">
+    <div class="dashboard-main-stack">
+      <section class="dashboard-panel preview-actions-panel">
+        <div class="panel-title-row">
+          <h2>Preview actions</h2>
+          <span class="soft-chip">Preview mode only</span>
+        </div>
+        <p>Run safe previews before enabling live scheduling. No customer messages are sent automatically.</p>
+        <div class="preview-action-bar">
+          <form method="post" action="/clients/{{ config.client_id }}/preview-summary">
+            <button class="button primary" type="submit"><span class="material-symbols-outlined">play_arrow</span> Run daily summary preview</button>
+          </form>
+          <form class="inline-form" method="post" action="/clients/{{ config.client_id }}/preview-leads">
+            <label class="days-control">For <input type="number" name="limit" value="3" min="1" max="10"> leads</label>
+            <button class="button" type="submit">Preview lead drafts</button>
+          </form>
+        </div>
+        <p class="safe-copy">No automatic customer messages are sent. Drafts and summaries are generated for review only.</p>
+      </section>
+
+      {% if summary %}<section class="dashboard-panel output-panel"><h2>Today’s Owner Summary</h2><pre>{{ summary }}</pre></section>{% endif %}
+      {% if preview %}<section class="dashboard-panel output-panel"><h2>Lead Follow-Up Preview</h2><pre>{{ preview }}</pre></section>{% endif %}
+
+      <section class="dashboard-panel recent-activity-panel">
+        <h2>Recent activity</h2>
+        {% if summary or preview %}
+          <div class="activity-list">
+            {% if summary %}<div><span class="material-symbols-outlined">summarize</span><strong>Daily summary preview generated</strong><p>Review the output above before sending anything to the owner.</p></div>{% endif %}
+            {% if preview %}<div><span class="material-symbols-outlined">edit_note</span><strong>Lead draft preview generated</strong><p>Drafts are ready for human review and approval.</p></div>{% endif %}
+          </div>
+        {% else %}
+          <div class="empty-state"><span class="material-symbols-outlined">history</span><p>No automation runs yet. Run a preview to see activity here.</p></div>
+        {% endif %}
+      </section>
+    </div>
+
+    <aside class="dashboard-side-stack">
+      <section class="activation-card">
+        <span class="material-symbols-outlined">schedule</span>
+        <div><strong>Activation</strong><p>Scheduling is turned on after the client approves the settings and review process.</p></div>
+      </section>
+
+      <section class="dashboard-panel setup-health-panel">
+        <div class="panel-title-row">
+          <h2>Setup Health</h2>
+          <span class="soft-chip">{{ ready_checks }} of {{ total_checks }} checks ready</span>
+        </div>
+        <div class="checks compact dashboard-checks">
+          {% for check in checks %}
+            <div class="check {{ check.status }}">
+              <span class="material-symbols-outlined">{% if check.status == 'ok' %}check_circle{% elif check.status == 'error' %}warning{% else %}error{% endif %}</span>
+              <div><strong>{{ check.label }}</strong><small>{{ check.message }}</small></div>
+              {% if check.status != 'ok' %}<a href="/setup">Review</a>{% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+    </aside>
+  </section>
+
+  <section class="dashboard-panel lead-queue-panel">
+    <div class="panel-title-row"><h2>Lead Queue</h2><span class="soft-chip">Google Sheets source</span></div>
+    {% if lead_error %}<p class="warning">Could not load live leads yet: {{ lead_error }}</p>{% endif %}
+    {% if leads %}
+    <div class="lead-list">
+      {% for lead in leads %}
+        <article class="lead">
+          <div><strong>{{ lead.name or 'Unnamed lead' }}</strong><span>{{ lead.lead_id }}</span></div>
+          <div class="pill {{ lead.lead_temperature or 'new' }}">{{ lead.lead_temperature or 'new' }}</div>
+          <p>{{ lead.recommended_action or 'Run preview to generate recommended action.' }}</p>
+          {% if lead.draft_message %}<blockquote>{{ lead.draft_message }}</blockquote>{% endif %}
+        </article>
+      {% endfor %}
+    </div>
+    {% else %}<p>No leads to show yet. Validate the connected Google Sheet or run a preview after adding sample leads.</p>{% endif %}
+  </section>
+
+  <section class="dashboard-panel schedule-panel">
+    <h2>Automation Schedule</h2>
+    <p><strong>Daily summary:</strong> {{ config.daily_summary_time }} · <strong>Processing:</strong> {{ config.process_leads_frequency.replace('_', ' ') }}</p>
+    <p><strong>Config:</strong> <code>{{ config_path }}</code></p>
+  </section>
 </section>
 {% endblock %}

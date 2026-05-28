@@ -87,3 +87,57 @@ def test_validate_setup_warns_when_google_env_missing(monkeypatch, tmp_path: Pat
     checks = validate_setup(config)
 
     assert any(check.label == "Google access" and check.status == "warn" for check in checks)
+
+
+def test_build_client_config_dict_persists_confirmed_column_mapping():
+    data = build_client_config_dict(
+        {
+            "business_name": "Pilot Realty",
+            "agent_name": "Rex",
+            "agent_phone": "555",
+            "agent_email": "rex@example.com",
+            "spreadsheet_url": "sheet123",
+            "column_name": "Client Name",
+            "column_phone": "WhatsApp Number",
+            "column_budget": "Price Range",
+            "column_desired_location": "Preferred Area",
+            "column_timeline": "Move-in Timeline",
+            "column_message": "Inquiry Notes",
+        }
+    )
+
+    assert data["repository"]["column_mapping"] == {
+        "name": "Client Name",
+        "phone": "WhatsApp Number",
+        "budget": "Price Range",
+        "desired_location": "Preferred Area",
+        "timeline": "Move-in Timeline",
+        "message": "Inquiry Notes",
+    }
+
+
+def test_load_client_config_round_trips_column_mapping(tmp_path: Path):
+    config_path = tmp_path / "client.yaml"
+    config_path.write_text(
+        "\n".join(
+            [
+                "client_id: pilot_client",
+                "business_name: Pilot Realty",
+                "agent_name: Agent",
+                "agent_phone: '555-0100'",
+                "agent_email: agent@example.invalid",
+                "repository:",
+                "  type: google_sheets",
+                "  spreadsheet_id: sheet123",
+                "  credentials_env: MATON_API_KEY",
+                "  column_mapping:",
+                "    name: Client Name",
+                "    phone: WhatsApp Number",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_client_config(config_path)
+
+    assert config.column_mapping == {"name": "Client Name", "phone": "WhatsApp Number"}

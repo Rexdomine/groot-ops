@@ -1,55 +1,325 @@
 {% extends "base.html" %}
 {% block title %}Setup Groot Ops{% endblock %}
 {% block content %}
-<section class="page-head">
-  <p class="eyebrow">5-minute realtor setup</p>
-  <h1>Make automation feel simple.</h1>
-  <p class="lede">Fill this once, validate the lead sheet, then preview exactly what Groot Ops will do.</p>
+<section class="setup-hero">
+  <p class="eyebrow">Realtor onboarding</p>
+  <h1>Set up your lead follow-up engine.</h1>
+  <p class="lede">Connect the lead sheet, choose where owner updates should go, and set simple follow-up rules your team can understand.</p>
 </section>
 
 {% if saved %}
   <section class="success-banner">
     <strong>Setup saved.</strong> Config: <code>{{ config_path }}</code>
-    <a class="button small" href="/clients/{{ client_id }}/dashboard">Open dashboard</a>
+    <a class="button small primary" href="/clients/{{ client_id }}/dashboard">Open dashboard</a>
   </section>
 {% endif %}
 
-<section class="grid two">
-  <form class="panel form" method="post" action="/setup">
-    <div class="step"><span>1</span><div><h2>Business Profile</h2><p>Who is this automation working for?</p></div></div>
-    <label>Business / Brokerage name<input name="business_name" required value="{{ values.business_name or '' }}" placeholder="Evergreen Realty Group"></label>
-    <label>Agent name<input name="agent_name" required value="{{ values.agent_name or '' }}" placeholder="Ada Johnson"></label>
-    <div class="row"><label>Agent email<input type="email" name="agent_email" required value="{{ values.agent_email or '' }}" placeholder="agent@example.com"></label><label>Agent phone<input name="agent_phone" required value="{{ values.agent_phone or '' }}" placeholder="+1 555 010 0000"></label></div>
-    <label>Timezone<input name="timezone" value="{{ values.timezone or 'America/New_York' }}"></label>
+<section class="setup-health-strip" aria-label="Setup health">
+  <div>
+    <h2>Setup Health</h2>
+    <p id="setup-progress-copy">{% if checks %}Review the validation results below.{% else %}Step 1 of 5: Profile{% endif %}</p>
+  </div>
+  <div class="health-pills" role="tablist" aria-label="Setup sections">
+    <button type="button" class="active" data-step-target="profile" aria-selected="true"><span class="material-symbols-outlined" aria-hidden="true">check</span> Profile</button>
+    <button type="button" data-step-target="access" aria-selected="false">Access</button>
+    <button type="button" data-step-target="notifications" aria-selected="false">Notifications</button>
+    <button type="button" data-step-target="rules" aria-selected="false">Rules</button>
+    <button type="button" data-step-target="messages" aria-selected="false">Messages</button>
+  </div>
+</section>
 
-    <div class="step"><span>2</span><div><h2>Lead Source</h2><p>Use the Google Sheet they already understand.</p></div></div>
-    <label>Google Sheet URL or ID<input name="spreadsheet_url" required value="{{ values.spreadsheet_url or '' }}" placeholder="https://docs.google.com/spreadsheets/d/.../edit"></label>
-    <div class="row"><label>Leads sheet<input name="leads_sheet" value="{{ values.leads_sheet or 'Leads' }}"></label><label>Activity log sheet<input name="activity_log_sheet" value="{{ values.activity_log_sheet or 'Activity Log' }}"></label></div>
+<section class="setup-intro panel">
+  <div>
+    <p class="eyebrow">What these fields mean</p>
+    <h2>Guided setup, not a technical form.</h2>
+    <p>Groot Ops uses these settings to know where leads live, when the realtor gets updates, and when a lead needs attention. Keep the recommended defaults unless the business has a specific follow-up policy.</p>
+  </div>
+  <div class="info-grid">
+    <div><strong>Lead source</strong><span>The Google Sheet where new leads and updates are stored.</span></div>
+    <div><strong>Owner updates</strong><span>Daily summaries and reminders sent to the realtor or operator.</span></div>
+    <div><strong>Follow-up rules</strong><span>Simple timing rules that decide what needs attention first.</span></div>
+  </div>
+</section>
 
-    <div class="step"><span>3</span><div><h2>Owner Notifications</h2><p>Where should the agent receive summaries?</p></div></div>
-    <div class="row"><label>Channel<select name="owner_channel"><option value="telegram">Telegram</option><option value="email">Email</option><option value="whatsapp">WhatsApp later</option></select></label><label>Destination<input name="owner_destination" value="{{ values.owner_destination or '' }}" placeholder="Telegram handle or email"></label></div>
-    <div class="row"><label>Daily summary time<input name="daily_summary_time" value="{{ values.daily_summary_time or '08:30' }}"></label><label>Processing frequency<select name="process_leads_frequency"><option value="every_2h_weekdays">Every 2h weekdays</option><option value="daily_weekdays">Daily weekdays</option><option value="manual_demo">Manual demo only</option></select></label></div>
+<form class="setup-form" method="post" action="/setup">
+  <section class="setup-card" data-setup-step="profile" data-step-label="Profile" tabindex="-1">
+    <div class="card-title"><span class="material-symbols-outlined fill">storefront</span><div><h2>1. Business Profile</h2><p>Who is this automation working for?</p></div></div>
+    <div class="field-grid two-cols">
+      <label>Business / Brokerage name
+        <input name="business_name" required value="{{ values.business_name or '' }}" placeholder="e.g. Elite Realty Group">
+        <small>Shown on the dashboard and in internal summaries.</small>
+      </label>
+      <label>Primary Agent Name
+        <input name="agent_name" required value="{{ values.agent_name or '' }}" placeholder="Jane Doe">
+        <small>The owner or realtor receiving the follow-up drafts.</small>
+      </label>
+      <label>Contact Email
+        <input type="email" name="agent_email" required value="{{ values.agent_email or '' }}" placeholder="jane@eliterealty.com">
+        <small>Used for owner notifications when email is selected.</small>
+      </label>
+      <label>Business Phone
+        <input name="agent_phone" required value="{{ values.agent_phone or '' }}" placeholder="(555) 123-4567">
+        <small>Used for contact records and future SMS/WhatsApp setup.</small>
+      </label>
+      <label class="full-span">Operating Timezone
+        {% set selected_timezone = values.timezone or 'America/New_York' %}
+        <select name="timezone" required>
+          {% for zone, label in [
+            ('America/New_York', 'Eastern Time — New York / Miami'),
+            ('America/Chicago', 'Central Time — Chicago / Dallas'),
+            ('America/Denver', 'Mountain Time — Denver'),
+            ('America/Los_Angeles', 'Pacific Time — Los Angeles'),
+            ('America/Toronto', 'Toronto / Ontario'),
+            ('Europe/London', 'London / UK'),
+            ('Europe/Berlin', 'Berlin / Central Europe'),
+            ('Africa/Lagos', 'Lagos / West Africa'),
+            ('Africa/Johannesburg', 'Johannesburg / South Africa'),
+            ('Asia/Dubai', 'Dubai / UAE')
+          ] %}
+            <option value="{{ zone }}" {% if selected_timezone == zone %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <small>Pick the client’s local timezone so summaries and follow-ups run at the right local time.</small>
+      </label>
+    </div>
+  </section>
 
-    <div class="step"><span>4</span><div><h2>Automation Rules</h2><p>Simple defaults that score leads and draft follow-up.</p></div></div>
-    <div class="row three"><label>Hot days<input type="number" name="hot_timeline_days" value="{{ values.hot_timeline_days or 14 }}"></label><label>Warm days<input type="number" name="warm_timeline_days" value="{{ values.warm_timeline_days or 60 }}"></label><label>Stale after<input type="number" name="stale_after_days" value="{{ values.stale_after_days or 7 }}"></label></div>
-    <label>Message tone<input name="voice" value="{{ values.voice or 'friendly, concise, professional' }}"></label>
-    <div class="row"><label>Max draft chars<input type="number" name="max_draft_chars" value="{{ values.max_draft_chars or 700 }}"></label><label>Opt-out note<input name="required_disclaimer" value="{{ values.required_disclaimer or 'Reply STOP to opt out.' }}"></label></div>
+  <section class="setup-card" data-setup-step="access" data-step-label="Access" tabindex="-1">
+    <div class="card-title"><span class="material-symbols-outlined fill">table_chart</span><div><h2>2. Lead Source</h2><p>Connect the spreadsheet where new leads land.</p></div></div>
+    <p class="card-copy">Groot Ops will monitor this sheet continuously while keeping the realtor’s existing workflow intact.</p>
+    <label>Google Sheet URL or ID
+      <input name="spreadsheet_url" required value="{{ values.spreadsheet_url or '' }}" placeholder="https://docs.google.com/spreadsheets/d/.../edit">
+      <small>Paste the full Google Sheet link. Groot will extract the sheet ID automatically.</small>
+    </label>
+    <div class="field-grid two-cols">
+      <label>Leads sheet
+        <input name="leads_sheet" value="{{ values.leads_sheet or 'Leads' }}">
+        <small>Recommended default: <strong>Leads</strong>. This tab stores lead rows.</small>
+      </label>
+      <label>Activity log sheet
+        <input name="activity_log_sheet" value="{{ values.activity_log_sheet or 'Activity Log' }}">
+        <small>Recommended default: <strong>Activity Log</strong>. This tab records what the automation did.</small>
+      </label>
+    </div>
+    <div class="smart-mapping-card">
+      <div><span class="material-symbols-outlined fill">auto_awesome</span><div><strong>Smart column matching</strong><p>Groot can work with your existing sheet columns. Leave these blank for automatic matching, or fill them if a client uses unusual column names.</p></div></div>
+      <div class="field-grid two-cols compact-fields">
+        <label>Name column
+          <input name="column_name" value="{{ values.column_name or '' }}" placeholder="e.g. Client Name, Buyer Name">
+        </label>
+        <label>Phone column
+          <input name="column_phone" value="{{ values.column_phone or '' }}" placeholder="e.g. WhatsApp Number, Mobile">
+        </label>
+        <label>Email column
+          <input name="column_email" value="{{ values.column_email or '' }}" placeholder="e.g. Email Address">
+        </label>
+        <label>Budget column
+          <input name="column_budget" value="{{ values.column_budget or '' }}" placeholder="e.g. Price Range">
+        </label>
+        <label>Location column
+          <input name="column_desired_location" value="{{ values.column_desired_location or '' }}" placeholder="e.g. Preferred Area">
+        </label>
+        <label>Timeline column
+          <input name="column_timeline" value="{{ values.column_timeline or '' }}" placeholder="e.g. Move-in Timeline">
+        </label>
+        <label class="full-span">Notes / requirements column
+          <input name="column_message" value="{{ values.column_message or '' }}" placeholder="e.g. Inquiry Notes, Comments, Requirements">
+        </label>
+      </div>
+    </div>
+  </section>
 
-    <button class="button primary" type="submit">Save setup & validate sheet</button>
-  </form>
+  <section class="setup-card" data-setup-step="notifications" data-step-label="Notifications" tabindex="-1">
+    <div class="card-title"><span class="material-symbols-outlined fill">notifications_active</span><div><h2>3. Owner Notifications</h2><p>Where should the realtor receive daily summaries?</p></div></div>
+    <p class="card-copy">Choose how Groot should alert the owner when a high-priority lead requires attention.</p>
+    {% set selected_channel = values.owner_channel or 'telegram' %}
+    <div class="channel-grid" role="radiogroup" aria-label="Notification channel">
+      <label class="channel-card" onclick="this.querySelector('input').checked = true">
+        <input type="radio" name="owner_channel" value="telegram" {% if selected_channel == 'telegram' %}checked{% endif %}>
+        <span class="material-symbols-outlined telegram">send</span>
+        <strong>Telegram</strong>
+      </label>
+      <label class="channel-card" onclick="this.querySelector('input').checked = true">
+        <input type="radio" name="owner_channel" value="email" {% if selected_channel == 'email' %}checked{% endif %}>
+        <span class="material-symbols-outlined fill">mail</span>
+        <strong>Email</strong>
+      </label>
+      <label class="channel-card disabled" aria-disabled="true" title="WhatsApp is not available yet">
+        <input type="radio" name="owner_channel" value="whatsapp" disabled>
+        <span class="material-symbols-outlined whatsapp">forum</span>
+        <strong>WhatsApp</strong>
+        <small>Not available yet</small>
+      </label>
+    </div>
+    <div class="field-grid two-cols">
+      <label>Destination
+        <input name="owner_destination" value="{{ values.owner_destination or '' }}" placeholder="Telegram handle or email">
+        <small>Example: @agentname or agent@example.com.</small>
+      </label>
+      <label>Daily summary time
+        <input type="time" name="daily_summary_time" value="{{ values.daily_summary_time or '08:30' }}">
+        <small>Recommended default: <strong>08:30</strong>, before the workday starts.</small>
+      </label>
+      <label class="full-span">Processing frequency
+        {% set selected_frequency = values.process_leads_frequency or 'every_2h_weekdays' %}
+        <select name="process_leads_frequency">
+          <option value="every_2h_weekdays" {% if selected_frequency == 'every_2h_weekdays' %}selected{% endif %}>Every 2 hours on weekdays</option>
+          <option value="daily_weekdays" {% if selected_frequency == 'daily_weekdays' %}selected{% endif %}>Once daily on weekdays</option>
+          <option value="manual" {% if selected_frequency in ['manual', 'manual_demo'] %}selected{% endif %}>Only when started manually</option>
+        </select>
+        <small>How often Groot should check the sheet for new or overdue leads.</small>
+      </label>
+    </div>
+  </section>
 
-  <aside class="panel sticky">
-    <h2>Setup health</h2>
-    {% if checks %}
+  <section class="setup-card" data-setup-step="rules" data-step-label="Rules" tabindex="-1">
+    <div class="card-title"><span class="material-symbols-outlined fill">rule_settings</span><div><h2>4. Follow-Up Rules</h2><p>Tell Groot when a lead should be treated as urgent, nurtured, or re-engaged.</p></div></div>
+    <div class="rule-explainer"><strong>Recommended default:</strong> Treat leads as urgent if they want action within 14 days, nurture leads up to 60 days out, and remind the agent after 7 days without follow-up.</div>
+    <div class="rule-cards">
+      <label class="rule-card">Urgent lead window
+        <span class="rule-question">When should a lead become urgent?</span>
+        <span class="value-badge">{{ values.hot_timeline_days or 14 }} Days</span>
+        <input type="number" min="1" max="365" name="hot_timeline_days" value="{{ values.hot_timeline_days or 14 }}">
+        <small>If the lead says they want to buy, sell, or tour within this many days, Groot puts them at the top of the follow-up list.</small>
+        <em>Example: 14 means “I want to move in the next 2 weeks” becomes urgent.</em>
+      </label>
+      <label class="rule-card">Nurture window
+        <span class="rule-question">When should Groot keep nurturing instead of marking the lead urgent?</span>
+        <span class="value-badge">{{ values.warm_timeline_days or 60 }} Days</span>
+        <input type="number" min="1" max="365" name="warm_timeline_days" value="{{ values.warm_timeline_days or 60 }}">
+        <small>If the lead’s timeline is later than urgent but within this many days, Groot keeps them warm with helpful follow-up.</small>
+        <em>Example: 60 means a buyer planning for next month continues to receive regular follow-up.</em>
+      </label>
+      <label class="rule-card">Re-engage reminder
+        <span class="rule-question">When should Groot remind the agent to re-engage?</span>
+        <span class="value-badge">{{ values.stale_after_days or 7 }} Days</span>
+        <input type="number" min="1" max="90" name="stale_after_days" value="{{ values.stale_after_days or 7 }}">
+        <small>If nobody has followed up for this many days, Groot flags the lead so the agent can restart the conversation.</small>
+        <em>Example: 7 means a lead should not sit untouched for more than a week.</em>
+      </label>
+    </div>
+  </section>
+
+  <section class="setup-card" data-setup-step="messages" data-step-label="Messages" tabindex="-1">
+    <div class="card-title"><span class="material-symbols-outlined fill">edit_note</span><div><h2>5. Message Settings</h2><p>Shape how draft follow-ups sound.</p></div></div>
+    <label>Message tone
+      <input name="voice" value="{{ values.voice or 'friendly, concise, professional' }}">
+      <small>Example: friendly, concise, professional. This shapes draft follow-up messages.</small>
+    </label>
+    <div class="field-grid two-cols">
+      <label>Max draft chars
+        <input type="number" min="160" max="2000" name="max_draft_chars" value="{{ values.max_draft_chars or 700 }}">
+        <small>Keeps drafts short enough for quick review.</small>
+      </label>
+      <label>Opt-out note
+        <input name="required_disclaimer" value="{{ values.required_disclaimer or 'Reply STOP to opt out.' }}">
+        <small>Safety/compliance note added to follow-up message drafts.</small>
+      </label>
+    </div>
+  </section>
+
+  <section class="support-grid">
+    <aside class="safety-note">
+      <div><span class="material-symbols-outlined fill">shield</span><strong>Safety Boundary</strong></div>
+      <p>Groot does not send messages to leads automatically. It prepares summaries and draft follow-ups for human review.</p>
+    </aside>
+    <aside class="field-guide">
+      <div><span class="material-symbols-outlined">menu_book</span><strong>Quick Field Guide</strong></div>
+      <p><strong>Timeline:</strong> how soon the lead wants to buy, sell, or tour.</p>
+      <p><strong>Follow-up due:</strong> when the agent should contact the lead again.</p>
+      <p><strong>Lead priority:</strong> Groot’s simple urgent/nurture/re-engage recommendation.</p>
+    </aside>
+  </section>
+
+  {% if checks %}
+    <section class="setup-card checks-card">
+      <div class="card-title"><span class="material-symbols-outlined">fact_check</span><div><h2>Validation Results</h2><p>Groot checked the setup details.</p></div></div>
       <div class="checks">
         {% for check in checks %}
           <div class="check {{ check.status }}"><strong>{{ check.label }}</strong><span>{{ check.message }}</span></div>
         {% endfor %}
       </div>
-    {% else %}
-      <p>After you save, Groot will verify profile, Google access, and lead sheet readiness.</p>
-    {% endif %}
-    <div class="safety-note"><strong>Safety boundary:</strong> this demo does not send messages to leads. It only previews summaries and draft follow-ups.</div>
-  </aside>
-</section>
+    </section>
+  {% endif %}
+
+  <div class="form-actions">
+    <button class="button primary jumbo" type="submit">Save setup & validate sheet</button>
+  </div>
+</form>
+
+<script>
+(function () {
+  const setupForm = document.querySelector('.setup-form');
+  const pills = Array.from(document.querySelectorAll('[data-step-target]'));
+  const sections = Array.from(document.querySelectorAll('[data-setup-step]'));
+  const progressCopy = document.getElementById('setup-progress-copy');
+
+  if (!setupForm || pills.length === 0 || sections.length === 0) {
+    return;
+  }
+
+  function updateSetupProgress(stepName) {
+    const section = sections.find((item) => item.dataset.setupStep === stepName) || sections[0];
+    const activeStep = section.dataset.setupStep;
+    const activeLabel = section.dataset.stepLabel;
+    const activeIndex = sections.indexOf(section) + 1;
+
+    pills.forEach((pill) => {
+      const isActive = pill.dataset.stepTarget === activeStep;
+      pill.classList.toggle('active', isActive);
+      pill.setAttribute('aria-selected', isActive ? 'true' : 'false');
+
+      const existingIcon = pill.querySelector('.material-symbols-outlined');
+      if (existingIcon) {
+        existingIcon.remove();
+      }
+      if (isActive) {
+        const icon = document.createElement('span');
+        icon.className = 'material-symbols-outlined';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.textContent = 'check';
+        pill.prepend(icon);
+      }
+    });
+
+    if (progressCopy) {
+      progressCopy.textContent = `Step ${activeIndex} of ${sections.length}: ${activeLabel}`;
+    }
+  }
+
+  setupForm.addEventListener('focusin', (event) => {
+    const section = event.target.closest('[data-setup-step]');
+    if (section) {
+      updateSetupProgress(section.dataset.setupStep);
+    }
+  });
+
+  pills.forEach((pill) => {
+    pill.addEventListener('click', () => {
+      const section = sections.find((item) => item.dataset.setupStep === pill.dataset.stepTarget);
+      if (!section) {
+        return;
+      }
+      updateSetupProgress(section.dataset.setupStep);
+      section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      section.focus({ preventScroll: true });
+    });
+  });
+
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      const visible = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (visible) {
+        updateSetupProgress(visible.target.dataset.setupStep);
+      }
+    }, { rootMargin: '-35% 0px -45% 0px', threshold: [0.2, 0.45, 0.7] });
+
+    sections.forEach((section) => observer.observe(section));
+  }
+
+  updateSetupProgress(sections[0].dataset.setupStep);
+}());
+</script>
 {% endblock %}
