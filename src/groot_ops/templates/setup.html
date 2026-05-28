@@ -17,14 +17,14 @@
 <section class="setup-health-strip" aria-label="Setup health">
   <div>
     <h2>Setup Health</h2>
-    <p>{% if checks %}Review the validation results below.{% else %}1 of 5 steps completed{% endif %}</p>
+    <p id="setup-progress-copy">{% if checks %}Review the validation results below.{% else %}Step 1 of 5: Profile{% endif %}</p>
   </div>
-  <div class="health-pills">
-    <span class="active"><span class="material-symbols-outlined">check</span> Profile</span>
-    <span>Access</span>
-    <span>Notifications</span>
-    <span>Rules</span>
-    <span>Messages</span>
+  <div class="health-pills" role="tablist" aria-label="Setup sections">
+    <button type="button" class="active" data-step-target="profile" aria-selected="true"><span class="material-symbols-outlined" aria-hidden="true">check</span> Profile</button>
+    <button type="button" data-step-target="access" aria-selected="false">Access</button>
+    <button type="button" data-step-target="notifications" aria-selected="false">Notifications</button>
+    <button type="button" data-step-target="rules" aria-selected="false">Rules</button>
+    <button type="button" data-step-target="messages" aria-selected="false">Messages</button>
   </div>
 </section>
 
@@ -42,7 +42,7 @@
 </section>
 
 <form class="setup-form" method="post" action="/setup">
-  <section class="setup-card">
+  <section class="setup-card" data-setup-step="profile" data-step-label="Profile" tabindex="-1">
     <div class="card-title"><span class="material-symbols-outlined fill">storefront</span><div><h2>1. Business Profile</h2><p>Who is this automation working for?</p></div></div>
     <div class="field-grid two-cols">
       <label>Business / Brokerage name
@@ -84,7 +84,7 @@
     </div>
   </section>
 
-  <section class="setup-card">
+  <section class="setup-card" data-setup-step="access" data-step-label="Access" tabindex="-1">
     <div class="card-title"><span class="material-symbols-outlined fill">table_chart</span><div><h2>2. Lead Source</h2><p>Connect the spreadsheet where new leads land.</p></div></div>
     <p class="card-copy">Groot Ops will monitor this sheet continuously while keeping the realtor’s existing workflow intact.</p>
     <label>Google Sheet URL or ID
@@ -103,7 +103,7 @@
     </div>
   </section>
 
-  <section class="setup-card">
+  <section class="setup-card" data-setup-step="notifications" data-step-label="Notifications" tabindex="-1">
     <div class="card-title"><span class="material-symbols-outlined fill">notifications_active</span><div><h2>3. Owner Notifications</h2><p>Where should the realtor receive daily summaries?</p></div></div>
     <p class="card-copy">Choose how Groot should alert the owner when a high-priority lead requires attention.</p>
     {% set selected_channel = values.owner_channel or 'telegram' %}
@@ -146,7 +146,7 @@
     </div>
   </section>
 
-  <section class="setup-card">
+  <section class="setup-card" data-setup-step="rules" data-step-label="Rules" tabindex="-1">
     <div class="card-title"><span class="material-symbols-outlined fill">rule_settings</span><div><h2>4. Follow-Up Rules</h2><p>Tell Groot when a lead should be treated as urgent, nurtured, or re-engaged.</p></div></div>
     <div class="rule-explainer"><strong>Recommended default:</strong> Treat leads as urgent if they want action within 14 days, nurture leads up to 60 days out, and remind the agent after 7 days without follow-up.</div>
     <div class="rule-cards">
@@ -174,7 +174,7 @@
     </div>
   </section>
 
-  <section class="setup-card">
+  <section class="setup-card" data-setup-step="messages" data-step-label="Messages" tabindex="-1">
     <div class="card-title"><span class="material-symbols-outlined fill">edit_note</span><div><h2>5. Message Settings</h2><p>Shape how draft follow-ups sound.</p></div></div>
     <label>Message tone
       <input name="voice" value="{{ values.voice or 'friendly, concise, professional' }}">
@@ -220,4 +220,80 @@
     <button class="button primary jumbo" type="submit">Save setup & validate sheet</button>
   </div>
 </form>
+
+<script>
+(function () {
+  const setupForm = document.querySelector('.setup-form');
+  const pills = Array.from(document.querySelectorAll('[data-step-target]'));
+  const sections = Array.from(document.querySelectorAll('[data-setup-step]'));
+  const progressCopy = document.getElementById('setup-progress-copy');
+
+  if (!setupForm || pills.length === 0 || sections.length === 0) {
+    return;
+  }
+
+  function updateSetupProgress(stepName) {
+    const section = sections.find((item) => item.dataset.setupStep === stepName) || sections[0];
+    const activeStep = section.dataset.setupStep;
+    const activeLabel = section.dataset.stepLabel;
+    const activeIndex = sections.indexOf(section) + 1;
+
+    pills.forEach((pill) => {
+      const isActive = pill.dataset.stepTarget === activeStep;
+      pill.classList.toggle('active', isActive);
+      pill.setAttribute('aria-selected', isActive ? 'true' : 'false');
+
+      const existingIcon = pill.querySelector('.material-symbols-outlined');
+      if (existingIcon) {
+        existingIcon.remove();
+      }
+      if (isActive) {
+        const icon = document.createElement('span');
+        icon.className = 'material-symbols-outlined';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.textContent = 'check';
+        pill.prepend(icon);
+      }
+    });
+
+    if (progressCopy) {
+      progressCopy.textContent = `Step ${activeIndex} of ${sections.length}: ${activeLabel}`;
+    }
+  }
+
+  setupForm.addEventListener('focusin', (event) => {
+    const section = event.target.closest('[data-setup-step]');
+    if (section) {
+      updateSetupProgress(section.dataset.setupStep);
+    }
+  });
+
+  pills.forEach((pill) => {
+    pill.addEventListener('click', () => {
+      const section = sections.find((item) => item.dataset.setupStep === pill.dataset.stepTarget);
+      if (!section) {
+        return;
+      }
+      updateSetupProgress(section.dataset.setupStep);
+      section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      section.focus({ preventScroll: true });
+    });
+  });
+
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      const visible = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (visible) {
+        updateSetupProgress(visible.target.dataset.setupStep);
+      }
+    }, { rootMargin: '-35% 0px -45% 0px', threshold: [0.2, 0.45, 0.7] });
+
+    sections.forEach((section) => observer.observe(section));
+  }
+
+  updateSetupProgress(sections[0].dataset.setupStep);
+}());
+</script>
 {% endblock %}

@@ -36,7 +36,7 @@ def test_setup_page_uses_client_friendly_controls_and_explanations():
     assert '<select name="timezone"' in response.text
     assert '<input type="time" name="daily_summary_time"' in response.text
     assert 'Setup Health' in response.text
-    assert '1 of 5 steps completed' in response.text
+    assert 'Step 1 of 5: Profile' in response.text
     assert 'Guided setup, not a technical form.' in response.text
     assert 'What these fields mean' in response.text
     assert 'Recommended default' in response.text
@@ -53,6 +53,11 @@ def test_setup_page_uses_client_friendly_controls_and_explanations():
     assert 'value="whatsapp" disabled' in response.text
     assert 'WhatsApp is not available yet' in response.text
     assert 'onclick="this.querySelector(\'input\').checked = true"' in response.text
+    assert 'data-step-target="notifications"' in response.text
+    assert 'data-setup-step="notifications"' in response.text
+    assert 'function updateSetupProgress' in response.text
+    assert "setupForm.addEventListener('focusin'" in response.text
+    assert 'IntersectionObserver' in response.text
     assert 'this demo' not in response.text.lower()
     assert 'for demos' not in response.text.lower()
     assert 'manual demo' not in response.text.lower()
