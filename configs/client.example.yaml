@@ -1,0 +1,35 @@
+# Copy this file to configs/<client_id>.local.yaml for a real pilot.
+# Keep real client configs private if they contain private sheet IDs or client PII.
+client_id: example_realtor
+business_name: Example Realty Group
+agent_name: Example Agent
+agent_phone: "555-010-0000"
+agent_email: agent@example.invalid
+timezone: America/New_York
+
+repository:
+  # For local demos, use csv. For pilots, use google_sheets.
+  type: google_sheets
+  spreadsheet_id: REPLACE_WITH_GOOGLE_SHEET_ID
+  leads_sheet: Leads
+  activity_log_sheet: Activity Log
+
+  # Option A: Maton Google Sheets proxy. Recommended for Rex/Hermes pilots.
+  credentials_env: MATON_API_KEY
+
+  # Option B: native Google service account. Uncomment one of these instead.
+  # credentials_env: GROOT_GOOGLE_SERVICE_ACCOUNT_JSON
+  # service_account_file: ${GOOGLE_APPLICATION_CREDENTIALS}
+
+scoring:
+  hot_timeline_days: 14
+  warm_timeline_days: 60
+  stale_after_days: 7
+
+messaging:
+  max_draft_chars: 700
+  required_disclaimer: "Reply STOP to opt out."
+  voice: friendly, concise, professional
+
+summary:
+  stale_after_days: 7

@@ -12,6 +12,15 @@ venv/
 
 # Local secrets / environment
 .env
+.env.*
+!.env.example
+*.service-account.json
+service-account*.json
+
+# Private/client-specific configs
+configs/*.local.yaml
+configs/*rex*.yaml
+configs/*private*.yaml
 
 # Generated local activity logs
 data/activity_log.csv
