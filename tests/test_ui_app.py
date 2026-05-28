@@ -100,3 +100,79 @@ def test_setup_saves_demo_config_and_shows_dashboard_link(monkeypatch, tmp_path)
     assert dashboard.status_code == 200
     assert "Evergreen Realty" in dashboard.text
     assert "No automatic customer messages" in dashboard.text or "does not send" in dashboard.text
+
+
+def test_dashboard_uses_stitch_inspired_supported_sections(monkeypatch, tmp_path):
+    monkeypatch.setenv("GROOT_OPS_DEMO_CONFIG_DIR", str(tmp_path))
+    monkeypatch.delenv("MATON_API_KEY", raising=False)
+    client = TestClient(create_app())
+    client.post(
+        "/setup",
+        data={
+            "business_name": "Confort Properties",
+            "agent_name": "Alex John",
+            "agent_phone": "+155****0100",
+            "agent_email": "alex@example.com",
+            "timezone": "America/New_York",
+            "spreadsheet_url": "https://docs.google.com/spreadsheets/d/sheet123/edit",
+            "leads_sheet": "Leads",
+            "activity_log_sheet": "Activity Log",
+            "owner_channel": "email",
+            "owner_destination": "alex@example.com",
+            "daily_summary_time": "08:30",
+            "process_leads_frequency": "manual",
+            "hot_timeline_days": "14",
+            "warm_timeline_days": "60",
+            "stale_after_days": "7",
+            "voice": "friendly",
+            "max_draft_chars": "700",
+            "required_disclaimer": "Reply STOP to opt out.",
+        },
+    )
+
+    dashboard = client.get("/clients/confort_properties_alex_john/dashboard")
+
+    assert dashboard.status_code == 200
+    assert "Setup active" in dashboard.text
+    assert "Preview mode only" in dashboard.text
+    assert "Run safe previews before enabling live scheduling" in dashboard.text
+    assert "of 4 checks ready" in dashboard.text
+    assert "Recent activity" in dashboard.text
+    assert "No automation runs yet. Run a preview to see activity here." in dashboard.text
+    assert "Save this dashboard link" in dashboard.text
+    assert "/clients/confort_properties_alex_john/dashboard" in dashboard.text
+    assert "Authentication" not in dashboard.text
+    assert "Login" not in dashboard.text
+
+
+def test_dashboard_shortcut_opens_latest_client_without_auth(monkeypatch, tmp_path):
+    monkeypatch.setenv("GROOT_OPS_DEMO_CONFIG_DIR", str(tmp_path))
+    client = TestClient(create_app())
+    client.post(
+        "/setup",
+        data={
+            "business_name": "Evergreen Realty",
+            "agent_name": "Ada Agent",
+            "agent_phone": "+155****0100",
+            "agent_email": "ada@example.com",
+            "timezone": "America/New_York",
+            "spreadsheet_url": "https://docs.google.com/spreadsheets/d/sheet123/edit",
+            "leads_sheet": "Leads",
+            "activity_log_sheet": "Activity Log",
+            "owner_channel": "email",
+            "owner_destination": "ada@example.com",
+            "daily_summary_time": "08:30",
+            "process_leads_frequency": "manual",
+            "hot_timeline_days": "14",
+            "warm_timeline_days": "60",
+            "stale_after_days": "7",
+            "voice": "friendly",
+            "max_draft_chars": "700",
+            "required_disclaimer": "Reply STOP to opt out.",
+        },
+    )
+
+    response = client.get("/dashboard", follow_redirects=False)
+
+    assert response.status_code == 307
+    assert response.headers["location"] == "/clients/evergreen_realty_ada_agent/dashboard"

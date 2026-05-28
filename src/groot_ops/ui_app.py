@@ -17,6 +17,7 @@ from .repository_factory import create_lead_repository
 from .ui_config_service import (
     build_client_config_dict,
     list_demo_configs,
+    load_latest_or_sample,
     safe_config_path,
     validate_setup,
     write_client_config,
@@ -41,6 +42,13 @@ def create_app() -> FastAPI:
     @app.get("/setup", response_class=HTMLResponse)
     def setup(request: Request) -> Any:
         return templates.TemplateResponse(request, "setup.html", {"values": {}, "checks": []})
+
+    @app.get("/dashboard")
+    def latest_dashboard() -> RedirectResponse:
+        config_path, _config = load_latest_or_sample()
+        if config_path is None:
+            return RedirectResponse(url="/setup")
+        return RedirectResponse(url=f"/clients/{config_path.stem}/dashboard")
 
     @app.post("/setup", response_class=HTMLResponse)
     async def save_setup(request: Request) -> Any:
@@ -81,6 +89,8 @@ def create_app() -> FastAPI:
             "needs_approval": sum(1 for lead in leads if "approval" in (lead.approval_status or "").lower()),
             "stale": sum(1 for lead in leads if (lead.recommended_action or "").lower().find("stale") >= 0),
         }
+        ready_checks = sum(1 for check in checks if check.status == "ok")
+        dashboard_path = f"/clients/{config.client_id}/dashboard"
         return templates.TemplateResponse(
             request,
             "dashboard.html",
@@ -93,6 +103,9 @@ def create_app() -> FastAPI:
                 "cards": cards,
                 "summary": summary,
                 "preview": preview,
+                "ready_checks": ready_checks,
+                "total_checks": len(checks),
+                "dashboard_path": dashboard_path,
             },
         )
 
