@@ -41,6 +41,34 @@ def test_build_owner_summary_email_contains_actionable_digest():
     assert "Review pending drafts" in email.text_body
 
 
+def test_owner_summary_email_uses_branded_actionable_template(monkeypatch):
+    monkeypatch.setenv("GROOT_OPS_PUBLIC_BASE_URL", "https://demo.grootops.ai")
+    config = load_client_config("configs/sample_realtor.yaml")
+    config.client_id = "sample_realtor"
+    summary = DailySummary(
+        new_leads=[Lead(lead_id="L1", name="Ada Buyer", email="ada@example.com", phone="+15550101")],
+        hot_leads=[Lead(lead_id="L1", name="Ada Buyer", email="ada@example.com", phone="+15550101")],
+        follow_ups_due=[Lead(lead_id="L2", name="Ben Followup", phone="+15550202")],
+        pending_approvals=[Lead(lead_id="L3", name="Cara Approval", email="cara@example.com")],
+        stale_leads=[Lead(lead_id="L4", name="Dan Stale")],
+        errors=[Lead(lead_id="L5", name="Error Lead", errors="Missing phone")],
+    )
+
+    email = build_owner_summary_email(config, summary, recipient="owner@example.com")
+
+    assert "background:#012d1d" in email.html_body
+    assert "Groot Ops command center" in email.html_body
+    assert "Open dashboard" in email.html_body
+    assert "https://demo.grootops.ai/clients/sample_realtor/dashboard" in email.html_body
+    assert "Call now" in email.html_body
+    assert "tel:+15550101" in email.html_body
+    assert "Email lead" in email.html_body
+    assert "mailto:ada@example.com" in email.html_body
+    assert "Approve drafts" in email.html_body
+    assert "Fix data issues" in email.html_body
+    assert "Messages stay in human-review mode" in email.html_body
+
+
 def test_maton_gmail_sender_sends_base64url_mime(monkeypatch):
     calls = []
 
