@@ -36,7 +36,25 @@ def test_build_client_config_dict_uses_safe_defaults():
     assert data["repository"]["spreadsheet_id"] == "sheet123"
     assert data["repository"]["credentials_env"] == "MATON_API_KEY"
     assert data["notifications"]["owner_channel"] == "email"
+    assert data["notifications"]["owner_destination"] == "ada@example.com"
     assert data["schedule"]["automation_status"] == "demo_manual"
+
+
+def test_email_notification_defaults_to_contact_email_when_destination_blank():
+    data = build_client_config_dict(
+        {
+            "business_name": "Evergreen Realty",
+            "agent_name": "Ada Agent",
+            "agent_phone": "+155****0100",
+            "agent_email": "form-email@example.com",
+            "spreadsheet_url": "https://docs.google.com/spreadsheets/d/sheet123/edit",
+            "owner_channel": "email",
+            "owner_destination": "",
+        }
+    )
+
+    assert data["notifications"]["owner_channel"] == "email"
+    assert data["notifications"]["owner_destination"] == "form-email@example.com"
 
 
 def test_write_client_config_round_trips_new_ui_sections(tmp_path: Path):
