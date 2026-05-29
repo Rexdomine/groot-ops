@@ -104,12 +104,17 @@ def build_client_config_dict(form: dict[str, str]) -> dict[str, Any]:
     column_mapping = _column_mapping_from_form(form)
     if column_mapping:
         repository["column_mapping"] = column_mapping
+    owner_channel = (form.get("owner_channel") or "telegram").strip()
+    owner_destination = (form.get("owner_destination") or "").strip()
+    agent_email = (form.get("agent_email") or "").strip()
+    if owner_channel == "email" and not owner_destination:
+        owner_destination = agent_email
     return {
         "client_id": client_id,
         "business_name": business_name,
         "agent_name": agent_name,
         "agent_phone": (form.get("agent_phone") or "").strip(),
-        "agent_email": (form.get("agent_email") or "").strip(),
+        "agent_email": agent_email,
         "timezone": (form.get("timezone") or "America/New_York").strip(),
         "repository": repository,
         "scoring": {
@@ -124,8 +129,8 @@ def build_client_config_dict(form: dict[str, str]) -> dict[str, Any]:
         },
         "summary": {"stale_after_days": _int_from_form(form, "stale_after_days", 7)},
         "notifications": {
-            "owner_channel": (form.get("owner_channel") or "telegram").strip(),
-            "owner_destination": (form.get("owner_destination") or "").strip(),
+            "owner_channel": owner_channel,
+            "owner_destination": owner_destination,
         },
         "schedule": {
             "daily_summary_time": (form.get("daily_summary_time") or "08:30").strip(),

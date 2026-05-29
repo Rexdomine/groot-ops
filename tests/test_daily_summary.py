@@ -54,3 +54,30 @@ def test_daily_summary_cli_can_email_owner_in_dry_run(monkeypatch):
 
     assert "Groot Ops Daily Summary" in output
     assert "Owner email dry run prepared for owner@example.com" in output
+
+
+def test_daily_summary_cli_uses_configured_owner_email_without_override(tmp_path, monkeypatch):
+    config_path = tmp_path / "client.yaml"
+    config_path.write_text(
+        "\n".join(
+            [
+                "client_id: form_email_client",
+                "business_name: Form Email Realty",
+                "agent_name: Form Agent",
+                "agent_phone: '555-0100'",
+                "agent_email: form-email@example.com",
+                "repository:",
+                "  type: csv",
+                "  leads_csv: /opt/data/groot-ops/data/sample_leads.csv",
+                "notifications:",
+                "  owner_channel: email",
+                "  owner_destination: form-email@example.com",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("MATON_API_KEY", "test-key")
+
+    output = run_daily_summary(str(config_path), email_owner=True, email_dry_run=True)
+
+    assert "Owner email dry run prepared for form-email@example.com" in output

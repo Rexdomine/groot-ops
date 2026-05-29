@@ -54,8 +54,8 @@ Do not enable these until a pilot client approves scheduled automation.
 # Process new/changed leads every hour during business hours, weekdays.
 0 9-17 * * 1-5 cd /opt/data/groot-ops && set -a && . ./.env && set +a && .venv/bin/python -m groot_ops.main_process_leads --client configs/<client>.local.yaml --write >> logs/<client>-process.log 2>&1
 
-# Send owner summary email each morning through Maton Gmail.
-30 8 * * 1-5 cd /opt/data/groot-ops && set -a && . ./.env && set +a && .venv/bin/python -m groot_ops.main_daily_summary --client configs/<client>.local.yaml --email-owner --to "$GROOT_OPS_OWNER_EMAIL" >> logs/<client>-summary.log 2>&1
+# Send owner summary email each morning through Maton Gmail to the owner email saved in the client setup form.
+30 8 * * 1-5 cd /opt/data/groot-ops && set -a && . ./.env && set +a && .venv/bin/python -m groot_ops.main_daily_summary --client configs/<client>.local.yaml --email-owner >> logs/<client>-summary.log 2>&1
 ```
 
 ## Hermes cron recommendation
@@ -67,18 +67,18 @@ For Rex's pilot, prefer Hermes cron over raw system cron so failures can be deli
 - Number of leads processed or summary counts
 - Any error output
 - Whether writes were enabled
-- Whether owner email delivery was enabled and the recipient source (`GROOT_OPS_OWNER_EMAIL`, config owner destination, or explicit `--to` override)
+- Whether owner email delivery was enabled and which saved setup email received it
 
 Production email checklist:
 
 1. `MATON_API_KEY` is present in the runtime/deployment environment.
 2. Maton has an active `google-mail` connection.
-3. `GROOT_OPS_OWNER_EMAIL` is set for Hermes cron wrappers, or the client config has `notifications.owner_channel: email` and `notifications.owner_destination`.
+3. The setup form stores `notifications.owner_channel: email` and `notifications.owner_destination` from the realtor/contact email field. Do not use a personal/operator email override for client automation.
 4. Manual verification succeeds:
 
 ```bash
 /opt/data/scripts/groot-ops-phase2a-daily-summary.sh
-# Expected final line includes: Owner email sent for <owner email>
+# Expected final line includes: Owner email sent for <email saved in the client setup form>
 ```
 
 ## Rollback
