@@ -57,6 +57,11 @@ def test_daily_summary_cli_can_email_owner_in_dry_run(monkeypatch):
 
 
 def test_daily_summary_cli_uses_configured_owner_email_without_override(tmp_path, monkeypatch):
+    leads_csv = tmp_path / "leads.csv"
+    leads_csv.write_text(
+        "lead_id,created_at,name,email,phone,status\nL1,2026-05-28T08:00:00+00:00,Form Lead,lead@example.com,555,new\n",
+        encoding="utf-8",
+    )
     config_path = tmp_path / "client.yaml"
     config_path.write_text(
         "\n".join(
@@ -68,7 +73,7 @@ def test_daily_summary_cli_uses_configured_owner_email_without_override(tmp_path
                 "agent_email: form-email@example.com",
                 "repository:",
                 "  type: csv",
-                "  leads_csv: /opt/data/groot-ops/data/sample_leads.csv",
+                f"  leads_csv: {leads_csv}",
                 "notifications:",
                 "  owner_channel: email",
                 "  owner_destination: form-email@example.com",
