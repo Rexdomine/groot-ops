@@ -46,3 +46,11 @@ def test_daily_summary_cli_enriches_unprocessed_sample_sheet():
     assert "Hot leads: 1" in output
     assert "Pending approvals: 4" in output
     assert "Errors / needs cleanup: 1" in output
+
+
+def test_daily_summary_cli_can_email_owner_in_dry_run(monkeypatch):
+    monkeypatch.setenv("MATON_API_KEY", "test-key")
+    output = run_daily_summary("configs/sample_realtor.yaml", email_owner=True, email_dry_run=True, to_email="owner@example.com")
+
+    assert "Groot Ops Daily Summary" in output
+    assert "Owner email dry run prepared for owner@example.com" in output
