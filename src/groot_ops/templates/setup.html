@@ -9,8 +9,9 @@
 
 {% if saved %}
   <section class="success-banner">
-    <strong>Setup saved.</strong> Config: <code>{{ config_path }}</code>
-    <a class="button small primary" href="/clients/{{ client_id }}/dashboard">Open dashboard</a>
+    <strong>Setup saved.</strong>
+    {% if email_status %}<span>{{ email_status }}</span>{% endif %}
+    <a class="button small primary" href="{{ dashboard_url or ('/clients/' ~ client_id ~ '/dashboard') }}">Open dashboard</a>
   </section>
 {% endif %}
 

@@ -8,7 +8,12 @@ from email.policy import default
 from groot_ops.config_loader import load_client_config
 from groot_ops.daily_summary import DailySummary, format_daily_summary
 from groot_ops.models import Lead
-from groot_ops.owner_notifications import MatonGmailSender, build_owner_summary_email, send_owner_summary_email
+from groot_ops.owner_notifications import (
+    MatonGmailSender,
+    build_owner_setup_confirmation_email,
+    build_owner_summary_email,
+    send_owner_summary_email,
+)
 
 
 def _decode_raw_message(raw: str):
@@ -39,6 +44,35 @@ def test_build_owner_summary_email_contains_actionable_digest():
     assert "Ben Followup" in email.html_body
     assert "No customer messages were sent" in email.text_body
     assert "Review pending drafts" in email.text_body
+
+
+def test_build_owner_setup_confirmation_email_is_branded_and_includes_private_dashboard_link():
+    config = load_client_config("configs/sample_realtor.yaml")
+    config.business_name = "Sunrise Realty Pilot"
+    config.agent_name = "Ava Realtor"
+    config.owner_notification_channel = "email"
+    config.owner_notification_destination = "ava@example.com"
+    config.process_leads_frequency = "every_2h_weekdays"
+    config.daily_summary_time = "08:30"
+
+    email = build_owner_setup_confirmation_email(
+        config,
+        recipient="ava@example.com",
+        dashboard_url="https://groot-ops.vercel.app/clients/sunrise/dashboard?token=private-token",
+    )
+
+    assert email.to_email == "ava@example.com"
+    assert "Groot Ops setup is ready" in email.subject
+    assert "Sunrise Realty Pilot" in email.subject
+    assert "Your private dashboard" in email.text_body
+    assert "https://groot-ops.vercel.app/clients/sunrise/dashboard?token=private-token" in email.text_body
+    assert "Copy the link above" not in email.text_body
+    assert "Groot Ops command center" in email.html_body
+    assert "Your setup is ready" in email.html_body
+    assert "Open private dashboard" in email.html_body
+    assert "Every 2h Weekdays" in email.html_body
+    assert "No customer messages are sent automatically" in email.html_body
+    assert "Keep this email" in email.html_body
 
 
 def test_owner_summary_email_uses_branded_actionable_template(monkeypatch):
