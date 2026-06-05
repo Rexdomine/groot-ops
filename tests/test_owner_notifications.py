@@ -12,6 +12,7 @@ from groot_ops.owner_notifications import (
     MatonGmailSender,
     build_owner_setup_confirmation_email,
     build_owner_summary_email,
+    send_owner_setup_confirmation_email,
     send_owner_summary_email,
 )
 
@@ -170,3 +171,25 @@ def test_send_owner_summary_email_requires_email_channel():
         assert "owner notification channel must be email" in str(exc)
     else:
         raise AssertionError("Expected ValueError for non-email owner channel")
+
+
+def test_setup_confirmation_dry_runs_reserved_test_recipients():
+    config = load_client_config("configs/sample_realtor.yaml")
+    config.business_name = "Evergreen Realty"
+    config.agent_email = "ada@example.com"
+    config.owner_notification_channel = "email"
+    config.owner_notification_destination = "alexandria.very.long.email.address@example-real-estate-international.com"
+
+    class SenderThatMustNotRun:
+        def send(self, **kwargs):
+            raise AssertionError("Reserved test recipients must not be sent through Gmail")
+
+    result = send_owner_setup_confirmation_email(
+        config,
+        dashboard_url="https://groot-ops.vercel.app/clients/evergreen/dashboard",
+        sender=SenderThatMustNotRun(),  # type: ignore[arg-type]
+    )
+
+    assert result["dry_run"] is True
+    assert result["to"] == "alexandria.very.long.email.address@example-real-estate-international.com"
+    assert result["channel"] == "email"

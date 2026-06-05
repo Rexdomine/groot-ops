@@ -15,6 +15,16 @@ from .daily_summary import DailySummary, format_daily_summary
 from .models import ClientConfig, Lead, utc_now_iso
 
 MATON_GMAIL_SEND_URL = "https://api.maton.ai/google-mail/gmail/v1/users/me/messages/send"
+RESERVED_TEST_EMAIL_DOMAINS = {
+    "example.com",
+    "example.invalid",
+    "example-real-estate-international.com",
+}
+
+
+def _is_reserved_test_email(email: str) -> bool:
+    _, separator, domain = email.strip().lower().rpartition("@")
+    return bool(separator and domain in RESERVED_TEST_EMAIL_DOMAINS)
 
 
 @dataclass(frozen=True)
@@ -338,7 +348,7 @@ def send_owner_setup_confirmation_email(
 ) -> dict[str, Any]:
     recipient = _resolve_setup_confirmation_recipient(config, explicit_to=to_email)
     email = build_owner_setup_confirmation_email(config, recipient=recipient, dashboard_url=dashboard_url)
-    if dry_run:
+    if dry_run or _is_reserved_test_email(recipient):
         return {
             "dry_run": True,
             "channel": "email",
@@ -370,7 +380,7 @@ def send_owner_summary_email(
         raise ValueError("owner notification channel must be email before sending owner summary email")
     recipient = resolve_owner_email(config, explicit_to=to_email)
     email = build_owner_summary_email(config, summary, recipient=recipient, summary_text=summary_text)
-    if dry_run:
+    if dry_run or _is_reserved_test_email(recipient):
         return {
             "dry_run": True,
             "channel": "email",
