@@ -17,6 +17,7 @@ from .main_daily_summary import run_daily_summary
 from .main_process_leads import process_leads
 from .owner_notifications import send_owner_setup_confirmation_email as send_setup_confirmation_email
 from .repository_factory import create_lead_repository
+from .models import ClientConfig
 from .ui_config_service import (
     build_client_config_dict,
     list_demo_configs,
@@ -79,6 +80,38 @@ def _private_dashboard_url(request: Request, client_id: str) -> str:
     return url
 
 
+def _setup_values_from_config(config: ClientConfig) -> dict[str, str]:
+    column_mapping = config.column_mapping or {}
+    return {
+        "client_id": config.client_id,
+        "business_name": config.business_name,
+        "agent_name": config.agent_name,
+        "agent_email": config.agent_email,
+        "agent_phone": config.agent_phone,
+        "timezone": config.timezone,
+        "spreadsheet_url": config.spreadsheet_id,
+        "leads_sheet": config.leads_sheet,
+        "activity_log_sheet": config.activity_log_sheet,
+        "column_name": column_mapping.get("name", ""),
+        "column_phone": column_mapping.get("phone", ""),
+        "column_email": column_mapping.get("email", ""),
+        "column_budget": column_mapping.get("budget", ""),
+        "column_desired_location": column_mapping.get("desired_location", ""),
+        "column_timeline": column_mapping.get("timeline", ""),
+        "column_message": column_mapping.get("message", ""),
+        "owner_channel": config.owner_notification_channel,
+        "owner_destination": config.owner_notification_destination,
+        "daily_summary_time": config.daily_summary_time,
+        "process_leads_frequency": config.process_leads_frequency,
+        "hot_timeline_days": str(config.hot_timeline_days),
+        "warm_timeline_days": str(config.warm_timeline_days),
+        "stale_after_days": str(config.stale_after_days),
+        "voice": config.voice,
+        "max_draft_chars": str(config.max_draft_chars),
+        "required_disclaimer": config.required_disclaimer,
+    }
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="Groot Ops Demo UI", version="0.1.0")
     app.mount("/static", StaticFiles(directory=PACKAGE_DIR / "static"), name="static")
@@ -112,9 +145,20 @@ def create_app() -> FastAPI:
         return templates.TemplateResponse(request, "home.html", {"configs": configs})
 
     @app.get("/setup", response_class=HTMLResponse)
-    def setup(request: Request) -> Any:
+    def setup(request: Request, client_id: str = "") -> Any:
         configs = list_demo_configs()
-        return templates.TemplateResponse(request, "setup.html", {"values": {}, "checks": [], "configs": configs})
+        values: dict[str, str] = {}
+        editing_client_id = client_id.strip()
+        if editing_client_id:
+            config_path = safe_config_path(editing_client_id)
+            if not config_path.exists():
+                raise HTTPException(status_code=404, detail="Demo client config not found")
+            values = _setup_values_from_config(load_client_config(config_path))
+        return templates.TemplateResponse(
+            request,
+            "setup.html",
+            {"values": values, "checks": [], "configs": configs, "editing": bool(editing_client_id)},
+        )
 
     @app.get("/dashboard")
     def latest_dashboard() -> RedirectResponse:

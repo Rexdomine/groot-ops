@@ -137,6 +137,72 @@ def test_setup_page_uses_client_friendly_controls_and_explanations():
     assert 'manual demo' not in response.text.lower()
 
 
+def test_setup_edit_link_prefills_saved_client_values(monkeypatch, tmp_path):
+    monkeypatch.setenv("GROOT_OPS_DEMO_CONFIG_DIR", str(tmp_path))
+    monkeypatch.delenv("MATON_API_KEY", raising=False)
+    client = TestClient(create_app())
+    client.post(
+        "/setup",
+        data={
+            "business_name": "Evergreen Realty",
+            "agent_name": "Ada Agent",
+            "agent_phone": "+155****0100",
+            "agent_email": "ada@example.com",
+            "timezone": "America/Chicago",
+            "spreadsheet_url": "https://docs.google.com/spreadsheets/d/sheet123/edit",
+            "leads_sheet": "Buyer Leads",
+            "activity_log_sheet": "Follow Up Log",
+            "column_name": "Client Name",
+            "column_phone": "Mobile",
+            "column_desired_location": "Preferred Area",
+            "column_timeline": "Move Window",
+            "column_message": "Inquiry Notes",
+            "owner_channel": "email",
+            "owner_destination": "ops@example.com",
+            "daily_summary_time": "09:15",
+            "process_leads_frequency": "manual",
+            "hot_timeline_days": "10",
+            "warm_timeline_days": "45",
+            "stale_after_days": "5",
+            "voice": "warm and concise",
+            "max_draft_chars": "600",
+            "required_disclaimer": "Text STOP to opt out.",
+        },
+    )
+
+    dashboard = client.get("/clients/evergreen_realty_ada_agent/dashboard")
+    assert dashboard.status_code == 200
+    assert 'href="/setup?client_id=evergreen_realty_ada_agent"' in dashboard.text
+
+    edit_form = client.get("/setup?client_id=evergreen_realty_ada_agent")
+
+    assert edit_form.status_code == 200
+    assert 'name="client_id" value="evergreen_realty_ada_agent"' in edit_form.text
+    assert 'value="Evergreen Realty"' in edit_form.text
+    assert 'value="Ada Agent"' in edit_form.text
+    assert 'value="ada@example.com"' in edit_form.text
+    assert 'value="+155****0100"' in edit_form.text
+    assert 'value="America/Chicago" selected' in edit_form.text
+    assert 'value="sheet123"' in edit_form.text
+    assert 'value="Buyer Leads"' in edit_form.text
+    assert 'value="Follow Up Log"' in edit_form.text
+    assert 'name="column_name" value="Client Name"' in edit_form.text
+    assert 'name="column_phone" value="Mobile"' in edit_form.text
+    assert 'name="column_desired_location" value="Preferred Area"' in edit_form.text
+    assert 'name="column_timeline" value="Move Window"' in edit_form.text
+    assert 'name="column_message" value="Inquiry Notes"' in edit_form.text
+    assert 'value="email" checked' in edit_form.text
+    assert 'value="ops@example.com"' in edit_form.text
+    assert 'value="09:15"' in edit_form.text
+    assert 'value="manual" selected' in edit_form.text
+    assert 'name="hot_timeline_days" value="10"' in edit_form.text
+    assert 'name="warm_timeline_days" value="45"' in edit_form.text
+    assert 'name="stale_after_days" value="5"' in edit_form.text
+    assert 'value="warm and concise"' in edit_form.text
+    assert 'name="max_draft_chars" value="600"' in edit_form.text
+    assert 'value="Text STOP to opt out."' in edit_form.text
+
+
 def test_setup_saves_demo_config_and_shows_dashboard_link(monkeypatch, tmp_path):
     monkeypatch.setenv("GROOT_OPS_DEMO_CONFIG_DIR", str(tmp_path))
     monkeypatch.delenv("MATON_API_KEY", raising=False)
