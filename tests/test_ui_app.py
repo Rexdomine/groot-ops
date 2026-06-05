@@ -142,7 +142,8 @@ def test_dashboard_uses_stitch_inspired_supported_sections(monkeypatch, tmp_path
     assert dashboard.status_code == 200
     assert "Setup saved" in dashboard.text
     assert "Preview mode only" in dashboard.text
-    assert "Run safe previews before enabling live scheduling" in dashboard.text
+    assert "Run safe previews before starting pilot automation" in dashboard.text
+    assert "Run safe previews before marking the pilot active" in dashboard.text
     assert "of 4 checks ready" in dashboard.text
     assert "Recent activity" in dashboard.text
     assert "No automation runs yet. Run a preview to see activity here." in dashboard.text
@@ -151,8 +152,9 @@ def test_dashboard_uses_stitch_inspired_supported_sections(monkeypatch, tmp_path
     assert "What to do next" in dashboard.text
     assert "1. Run the daily summary preview" in dashboard.text
     assert "2. Preview lead follow-up drafts" in dashboard.text
-    assert "3. Click Start Automation" in dashboard.text
-    assert "Start automation" in dashboard.text
+    assert "3. Mark pilot active" in dashboard.text
+    assert "Mark pilot active" in dashboard.text
+    assert "Start automation" not in dashboard.text
     assert "ask Groot Ops support/Drax" not in dashboard.text
     assert "Start setup is not the activation button" in dashboard.text
     assert "Edit setup" in dashboard.text
@@ -226,7 +228,7 @@ def test_dashboard_start_automation_button_sets_active_status(monkeypatch, tmp_p
 
     assert response.status_code == 200
     assert "Automation is on" in response.text
-    assert "Started by dashboard" in response.text
-    assert "Start automation" not in response.text
+    assert "Pilot automation marked active" in response.text
+    assert "Ready to activate" not in response.text
     config_text = (tmp_path / "evergreen_realty_ada_agent.yaml").read_text()
     assert "automation_status: active" in config_text

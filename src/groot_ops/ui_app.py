@@ -147,7 +147,7 @@ def create_app() -> FastAPI:
         if not config_path.exists():
             raise HTTPException(status_code=404, detail="Demo client config not found")
         set_automation_status(config_path, "active")
-        return dashboard(request, client_id, summary="Started by dashboard. Automation is on for the saved schedule.")
+        return dashboard(request, client_id, summary="Pilot automation marked active in the saved config. Enable the operator scheduler/Hermes cron separately for recurring production runs.")
 
     return app
 
