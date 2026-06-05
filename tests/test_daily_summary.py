@@ -46,3 +46,43 @@ def test_daily_summary_cli_enriches_unprocessed_sample_sheet():
     assert "Hot leads: 1" in output
     assert "Pending approvals: 4" in output
     assert "Errors / needs cleanup: 1" in output
+
+
+def test_daily_summary_cli_can_email_owner_in_dry_run(monkeypatch):
+    monkeypatch.setenv("MATON_API_KEY", "test-key")
+    output = run_daily_summary("configs/sample_realtor.yaml", email_owner=True, email_dry_run=True, to_email="owner@example.com")
+
+    assert "Groot Ops Daily Summary" in output
+    assert "Owner email dry run prepared for owner@example.com" in output
+
+
+def test_daily_summary_cli_uses_configured_owner_email_without_override(tmp_path, monkeypatch):
+    leads_csv = tmp_path / "leads.csv"
+    leads_csv.write_text(
+        "lead_id,created_at,name,email,phone,status\nL1,2026-05-28T08:00:00+00:00,Form Lead,lead@example.com,555,new\n",
+        encoding="utf-8",
+    )
+    config_path = tmp_path / "client.yaml"
+    config_path.write_text(
+        "\n".join(
+            [
+                "client_id: form_email_client",
+                "business_name: Form Email Realty",
+                "agent_name: Form Agent",
+                "agent_phone: '555-0100'",
+                "agent_email: form-email@example.com",
+                "repository:",
+                "  type: csv",
+                f"  leads_csv: {leads_csv}",
+                "notifications:",
+                "  owner_channel: email",
+                "  owner_destination: form-email@example.com",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("MATON_API_KEY", "test-key")
+
+    output = run_daily_summary(str(config_path), email_owner=True, email_dry_run=True)
+
+    assert "Owner email dry run prepared for form-email@example.com" in output
