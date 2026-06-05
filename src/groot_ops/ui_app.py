@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
@@ -26,10 +27,64 @@ from .ui_config_service import (
 
 PACKAGE_DIR = Path(__file__).resolve().parent
 
+
+PROTECTED_UI_PREFIXES = ("/setup", "/dashboard", "/clients/")
+
+
+def _dashboard_token() -> str:
+    return os.getenv("GROOT_OPS_DASHBOARD_TOKEN", "").strip()
+
+
+def _is_protected_ui_path(path: str) -> bool:
+    return path in {"/setup", "/dashboard"} or path.startswith(PROTECTED_UI_PREFIXES)
+
+
+def _request_has_valid_dashboard_token(request: Request, expected_token: str) -> bool:
+    supplied_token = (
+        request.query_params.get("token")
+        or request.headers.get("X-Groot-Ops-Dashboard-Token")
+        or request.cookies.get("groot_ops_dashboard_token")
+        or ""
+    ).strip()
+    return bool(supplied_token and supplied_token == expected_token)
+
+
+def _unauthorized_dashboard_response() -> HTMLResponse:
+    return HTMLResponse(
+        """
+        <!doctype html>
+        <title>Groot Ops dashboard access required</title>
+        <main style="font-family: system-ui, sans-serif; max-width: 640px; margin: 10vh auto; padding: 2rem;">
+          <h1>Dashboard access required</h1>
+          <p>This pilot dashboard is protected. Open the private dashboard link that includes the access token, or ask Groot Ops support for a fresh link.</p>
+        </main>
+        """,
+        status_code=401,
+    )
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="Groot Ops Demo UI", version="0.1.0")
     app.mount("/static", StaticFiles(directory=PACKAGE_DIR / "static"), name="static")
     templates = Jinja2Templates(directory=str(PACKAGE_DIR / "templates"))
+
+    @app.middleware("http")
+    async def protect_dashboard_routes(request: Request, call_next: Any) -> Any:
+        expected_token = _dashboard_token()
+        if expected_token and _is_protected_ui_path(request.url.path):
+            if not _request_has_valid_dashboard_token(request, expected_token):
+                return _unauthorized_dashboard_response()
+            response = await call_next(request)
+            if request.query_params.get("token") == expected_token:
+                response.set_cookie(
+                    "groot_ops_dashboard_token",
+                    expected_token,
+                    httponly=True,
+                    secure=request.url.scheme == "https",
+                    samesite="lax",
+                )
+            return response
+        return await call_next(request)
 
     @app.get("/health")
     def health() -> dict[str, str]:
@@ -147,7 +202,7 @@ def create_app() -> FastAPI:
         if not config_path.exists():
             raise HTTPException(status_code=404, detail="Demo client config not found")
         set_automation_status(config_path, "active")
-        return dashboard(request, client_id, summary="Started by dashboard. Automation is on for the saved schedule.")
+        return dashboard(request, client_id, summary="Pilot automation marked active in the saved config. Enable the operator scheduler/Hermes cron separately for recurring production runs.")
 
     return app
 

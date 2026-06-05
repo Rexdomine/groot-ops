@@ -21,20 +21,20 @@
   <section class="next-steps-card" aria-label="What to do next">
     <div class="next-steps-copy">
       <p class="eyebrow">What to do next</p>
-      <h2>{% if config.automation_status == 'active' %}Automation is on — Groot Ops is running on the saved schedule.{% else %}Your preview passed — now click Start Automation.{% endif %}</h2>
-      <p>Start setup is not the activation button. Use this dashboard to test previews, then start the saved automation schedule yourself when everything looks right.</p>
+      <h2>{% if config.automation_status == 'active' %}Pilot automation is marked active for the saved schedule.{% elif summary or preview %}Preview generated — review the output before starting pilot automation.{% else %}Run safe previews before starting pilot automation.{% endif %}</h2>
+      <p>Start setup is not the activation button. Use this dashboard to validate the sheet, review summaries and draft follow-ups, then mark the pilot automation active when everything looks right.</p>
     </div>
     <ol class="next-step-list">
       <li><strong>1. Run the daily summary preview</strong><span>Confirm the owner email/Telegram summary looks useful.</span></li>
       <li><strong>2. Preview lead follow-up drafts</strong><span>Check that draft messages match the realtor’s tone before any live processing.</span></li>
-      <li><strong>3. Click Start Automation</strong><span>Turn on the saved schedule directly from this dashboard — no operator handoff needed.</span></li>
+      <li><strong>3. Mark pilot active</strong><span>Confirm the client config is ready, then enable the operator scheduler/Hermes cron separately for recurring production runs.</span></li>
     </ol>
   </section>
 
   <section class="dashboard-link-card" aria-label="Return to this dashboard">
     <div>
       <strong>Save this dashboard link</strong>
-      <p>No login is required yet. Bookmark this client-specific link or share it with the operator who needs to return to this dashboard.</p>
+      <p>No login is required yet for this lightweight pilot console. Use private, client-specific links only, and set <code>GROOT_OPS_DASHBOARD_TOKEN</code> before exposing real client data outside a controlled demo.</p>
     </div>
     <code>{{ dashboard_path }}</code>
   </section>
@@ -69,7 +69,7 @@
           <h2>Preview actions</h2>
           <span class="soft-chip">Preview mode only</span>
         </div>
-        <p>Run safe previews before enabling live scheduling. No customer messages are sent automatically.</p>
+        <p>Run safe previews before marking the pilot active. No customer messages are sent automatically.</p>
         <div class="preview-action-bar">
           <form method="post" action="/clients/{{ config.client_id }}/preview-summary">
             <button class="button primary" type="submit"><span class="material-symbols-outlined">play_arrow</span> Run daily summary preview</button>
@@ -104,11 +104,11 @@
         <div>
           <strong>{% if config.automation_status == 'active' %}Automation is on{% else %}Ready to activate{% endif %}</strong>
           {% if config.automation_status == 'active' %}
-            <p>Groot Ops will run using the saved schedule: {{ config.process_leads_frequency.replace('_', ' ') }}.</p>
+            <p>Groot Ops is marked active in the saved config. Keep the operator-side scheduler/Hermes cron enabled separately for real recurring runs.</p>
           {% else %}
-            <p>After previews look good, click the button below to start the saved automation schedule.</p>
+            <p>After previews look good, click the button below to mark the pilot automation active. Recurring production runs still need the operator scheduler/Hermes cron enabled.</p>
             <form method="post" action="/clients/{{ config.client_id }}/activate">
-              <button class="button primary" type="submit"><span class="material-symbols-outlined">rocket_launch</span> Start automation</button>
+              <button class="button primary" type="submit"><span class="material-symbols-outlined">rocket_launch</span> Mark pilot active</button>
             </form>
           {% endif %}
         </div>
