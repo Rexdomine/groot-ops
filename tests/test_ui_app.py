@@ -50,6 +50,50 @@ def test_dashboard_token_protects_setup_and_client_routes(monkeypatch):
     assert client.get("/setup").status_code == 200
 
 
+def test_setup_sends_friendly_email_with_private_dashboard_link(monkeypatch, tmp_path):
+    sent = []
+
+    def fake_send_setup_confirmation_email(config, *, dashboard_url):
+        sent.append({"config": config, "dashboard_url": dashboard_url})
+        return {"channel": "email", "to": config.agent_email, "subject": "sent"}
+
+    monkeypatch.setenv("GROOT_OPS_DASHBOARD_TOKEN", "pilot-secret")
+    monkeypatch.setenv("GROOT_OPS_PUBLIC_BASE_URL", "https://groot-ops.vercel.app")
+    monkeypatch.setenv("GROOT_OPS_DEMO_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setattr("groot_ops.ui_app.send_setup_confirmation_email", fake_send_setup_confirmation_email)
+    client = TestClient(create_app())
+
+    response = client.post(
+        "/setup?token=pilot-secret",
+        data={
+            "business_name": "Sunrise Realty Pilot",
+            "agent_name": "Ava Realtor",
+            "agent_phone": "+155****0199",
+            "agent_email": "ava@example.com",
+            "timezone": "America/New_York",
+            "spreadsheet_url": "https://docs.google.com/spreadsheets/d/sheet123/edit",
+            "leads_sheet": "Leads",
+            "activity_log_sheet": "Activity Log",
+            "owner_channel": "email",
+            "owner_destination": "ava@example.com",
+            "daily_summary_time": "08:30",
+            "process_leads_frequency": "every_2h_weekdays",
+            "hot_timeline_days": "14",
+            "warm_timeline_days": "60",
+            "stale_after_days": "7",
+            "voice": "friendly",
+            "max_draft_chars": "700",
+            "required_disclaimer": "Reply STOP to opt out.",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "Confirmation email sent" in response.text
+    assert len(sent) == 1
+    assert sent[0]["config"].business_name == "Sunrise Realty Pilot"
+    assert sent[0]["dashboard_url"] == "https://groot-ops.vercel.app/clients/sunrise_realty_pilot_ava_realtor/dashboard?token=pilot-secret"
+
+
 def test_setup_page_uses_client_friendly_controls_and_explanations():
     client = TestClient(create_app())
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import urllib.parse
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
@@ -14,6 +15,7 @@ from fastapi.templating import Jinja2Templates
 from .config_loader import load_client_config
 from .main_daily_summary import run_daily_summary
 from .main_process_leads import process_leads
+from .owner_notifications import send_owner_setup_confirmation_email as send_setup_confirmation_email
 from .repository_factory import create_lead_repository
 from .ui_config_service import (
     build_client_config_dict,
@@ -61,6 +63,20 @@ def _unauthorized_dashboard_response() -> HTMLResponse:
         """,
         status_code=401,
     )
+
+
+def _public_base_url(request: Request) -> str:
+    configured = os.getenv("GROOT_OPS_PUBLIC_BASE_URL", "").strip().rstrip("/")
+    return configured or str(request.base_url).rstrip("/")
+
+
+def _private_dashboard_url(request: Request, client_id: str) -> str:
+    quoted_client_id = urllib.parse.quote(client_id)
+    url = f"{_public_base_url(request)}/clients/{quoted_client_id}/dashboard"
+    dashboard_token = _dashboard_token()
+    if dashboard_token:
+        url = f"{url}?token={urllib.parse.quote(dashboard_token)}"
+    return url
 
 
 def create_app() -> FastAPI:
@@ -115,6 +131,13 @@ def create_app() -> FastAPI:
         write_client_config(config_path, data)
         config = load_client_config(config_path)
         checks = validate_setup(config)
+        dashboard_url = _private_dashboard_url(request, data["client_id"])
+        email_status = ""
+        try:
+            result = send_setup_confirmation_email(config, dashboard_url=dashboard_url)
+            email_status = f"Confirmation email sent to {result.get('to', config.agent_email)}."
+        except Exception as exc:
+            email_status = f"Confirmation email not sent yet: {exc}"
         return templates.TemplateResponse(
             request,
             "setup.html",
@@ -122,6 +145,8 @@ def create_app() -> FastAPI:
                 "values": form,
                 "client_id": data["client_id"],
                 "config_path": str(config_path),
+                "dashboard_url": dashboard_url,
+                "email_status": email_status,
                 "checks": checks,
                 "saved": True,
                 "configs": list_demo_configs(),
