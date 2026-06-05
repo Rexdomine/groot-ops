@@ -297,6 +297,46 @@ def test_dashboard_uses_stitch_inspired_supported_sections(monkeypatch, tmp_path
     assert "Login" not in dashboard.text
 
 
+def test_dashboard_marks_mobile_wrapping_targets(monkeypatch, tmp_path):
+    monkeypatch.setenv("GROOT_OPS_DEMO_CONFIG_DIR", str(tmp_path))
+    monkeypatch.delenv("MATON_API_KEY", raising=False)
+    client = TestClient(create_app())
+    client.post(
+        "/setup",
+        data={
+            "business_name": "Confort Properties With A Very Long Mobile Overflow Name International Realty Group",
+            "agent_name": "Alexandria Johnson-Smith The Third",
+            "agent_phone": "+155****0100",
+            "agent_email": "alexandria@example.com",
+            "timezone": "America/New_York",
+            "spreadsheet_url": "https://docs.google.com/spreadsheets/d/sheet123/edit",
+            "leads_sheet": "Leads",
+            "activity_log_sheet": "Activity Log",
+            "owner_channel": "email",
+            "owner_destination": "alexandria@example.com",
+            "daily_summary_time": "08:30",
+            "process_leads_frequency": "every_2h_weekdays",
+            "hot_timeline_days": "14",
+            "warm_timeline_days": "60",
+            "stale_after_days": "7",
+            "voice": "friendly",
+            "max_draft_chars": "700",
+            "required_disclaimer": "Reply STOP to opt out.",
+        },
+    )
+
+    dashboard = client.get("/clients/confort_properties_with_a_very_long_mobile_overf/dashboard")
+
+    assert dashboard.status_code == 200
+    assert 'class="dashboard-meta" aria-label="Dashboard setup summary"' in dashboard.text
+    assert '<span class="meta-label">Agent</span>Alexandria Johnson-Smith The Third' in dashboard.text
+    assert '<span class="meta-label">Alerts</span>Email notifications' in dashboard.text
+    assert '<span class="meta-label">Cadence</span>Every 2h Weekdays' in dashboard.text
+    assert 'class="dashboard-path-code"' in dashboard.text
+    assert 'class="schedule-line"' in dashboard.text
+    assert 'class="config-path-line"' in dashboard.text
+
+
 def test_dashboard_shortcut_opens_latest_client_without_auth(monkeypatch, tmp_path):
     monkeypatch.setenv("GROOT_OPS_DEMO_CONFIG_DIR", str(tmp_path))
     client = TestClient(create_app())
