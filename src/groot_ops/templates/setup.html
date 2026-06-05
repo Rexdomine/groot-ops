@@ -3,8 +3,8 @@
 {% block content %}
 <section class="setup-hero">
   <p class="eyebrow">Realtor onboarding</p>
-  <h1>Set up your lead follow-up engine.</h1>
-  <p class="lede">Connect the lead sheet, choose where owner updates should go, and set simple follow-up rules your team can understand.</p>
+  <h1>{% if editing %}Edit your lead follow-up setup.{% else %}Set up your lead follow-up engine.{% endif %}</h1>
+  <p class="lede">{% if editing %}Your saved setup is pre-filled below. Update only the fields that need adjustment, then save again.{% else %}Connect the lead sheet, choose where owner updates should go, and set simple follow-up rules your team can understand.{% endif %}</p>
 </section>
 
 {% if saved %}
@@ -43,6 +43,7 @@
 </section>
 
 <form class="setup-form" method="post" action="/setup">
+  {% if values.client_id %}<input type="hidden" name="client_id" value="{{ values.client_id }}">{% endif %}
   <section class="setup-card" data-setup-step="profile" data-step-label="Profile" tabindex="-1">
     <div class="card-title"><span class="material-symbols-outlined fill">storefront</span><div><h2>1. Business Profile</h2><p>Who is this automation working for?</p></div></div>
     <div class="field-grid two-cols">
