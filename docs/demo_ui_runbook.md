@@ -13,7 +13,7 @@ This UI is a guided demo console for real estate agents. It shows how simple Gro
 - Validates Google Sheet access where credentials are configured.
 - Previews daily owner summaries.
 - Previews lead follow-up drafts in dry-run mode.
-- Lets the owner click **Start automation** after previews look good. This turns on the saved automation status in the dashboard while keeping the no-customer-auto-send safety boundary.
+- Lets the operator click **Mark pilot active** after previews look good. This marks the saved config active while keeping the no-customer-auto-send safety boundary. Recurring runs still require the operator scheduler/Hermes cron.
 
 ## What it does not do yet
 
@@ -57,6 +57,21 @@ vercel env add MATON_API_KEY production
 vercel env add MATON_API_KEY preview
 ```
 
+For protected pilot dashboards, set a long random token in every Vercel environment you expose:
+
+```bash
+vercel env add GROOT_OPS_DASHBOARD_TOKEN production
+vercel env add GROOT_OPS_DASHBOARD_TOKEN preview
+```
+
+When `GROOT_OPS_DASHBOARD_TOKEN` is set, `/setup`, `/dashboard`, and `/clients/*` require either:
+
+- `?token=<token>` in the private setup/dashboard link,
+- the `groot_ops_dashboard_token` cookie set after opening a valid token link, or
+- `X-Groot-Ops-Dashboard-Token: <token>` for scripted checks.
+
+Do not paste the token into GitHub, public docs, or client-facing screenshots.
+
 ## Vercel deployment shape
 
 The repo now includes:
@@ -71,6 +86,8 @@ Deploy flow once Vercel access is connected:
 vercel link
 vercel env add MATON_API_KEY production
 vercel env add MATON_API_KEY preview
+vercel env add GROOT_OPS_DASHBOARD_TOKEN production
+vercel env add GROOT_OPS_DASHBOARD_TOKEN preview
 vercel deploy
 ```
 
@@ -94,8 +111,8 @@ vercel deploy --prod
 10. Run **Daily summary preview**.
 11. Run **Preview lead drafts**.
 12. Explain: “No customer messages are sent automatically. You stay in control. Groot identifies the hot leads and drafts the follow-up.”
-13. Click **Start automation** to turn on the saved dashboard schedule.
-14. Close with: “That’s it — the workflow is now active from the dashboard.”
+13. Click **Mark pilot active** once the previews look right.
+14. Close with: “The pilot config is now marked active. We enable the operator scheduler separately when you approve recurring runs.”
 
 ## Troubleshooting
 
@@ -115,3 +132,7 @@ Check:
 ### Vercel notes
 
 Serverless files are ephemeral. Demo configs are written to `/tmp/groot-ops-demo-configs` on Vercel unless `GROOT_OPS_DEMO_CONFIG_DIR` is set. This is acceptable for a lightweight demo, but persistent multi-client storage should come later with a database or hosted config store.
+
+### `Dashboard access required`
+
+`GROOT_OPS_DASHBOARD_TOKEN` is set, but the request did not include the private token link or token cookie. Reopen `/setup?token=<token>` or `/clients/<client_id>/dashboard?token=<token>`.

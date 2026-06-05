@@ -27,6 +27,23 @@ def test_homepage_uses_stitch_inspired_production_sections():
     assert "for demos" not in response.text.lower()
 
 
+def test_dashboard_token_protects_setup_and_client_routes(monkeypatch):
+    monkeypatch.setenv("GROOT_OPS_DASHBOARD_TOKEN", "pilot-secret")
+    client = TestClient(create_app())
+
+    assert client.get("/health").status_code == 200
+    assert client.get("/").status_code == 200
+    blocked_setup = client.get("/setup")
+    assert blocked_setup.status_code == 401
+    assert "Dashboard access required" in blocked_setup.text
+    assert client.get("/clients/example/dashboard").status_code == 401
+
+    allowed_setup = client.get("/setup?token=pilot-secret")
+    assert allowed_setup.status_code == 200
+    assert "groot_ops_dashboard_token" in allowed_setup.headers.get("set-cookie", "")
+    assert client.get("/setup").status_code == 200
+
+
 def test_setup_page_uses_client_friendly_controls_and_explanations():
     client = TestClient(create_app())
 
