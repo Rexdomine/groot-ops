@@ -6,12 +6,12 @@
     <div>
       <p class="eyebrow">Lead Follow-Up Dashboard</p>
       <h1>{{ config.business_name }}</h1>
-      <div class="dashboard-meta">
-        <span>{{ config.agent_name }}</span>
-        <span>·</span>
-        <span>{{ config.owner_notification_channel|title }} notifications</span>
-        <span>·</span>
-        <span>{{ config.process_leads_frequency.replace('_', ' ')|title }}</span>
+      <div class="dashboard-meta" aria-label="Dashboard setup summary">
+        <span class="dashboard-meta-item"><span class="meta-label">Agent</span>{{ config.agent_name }}</span>
+        <span class="dashboard-meta-separator" aria-hidden="true">·</span>
+        <span class="dashboard-meta-item"><span class="meta-label">Alerts</span>{{ config.owner_notification_channel|title }} notifications</span>
+        <span class="dashboard-meta-separator" aria-hidden="true">·</span>
+        <span class="dashboard-meta-item"><span class="meta-label">Cadence</span>{{ config.process_leads_frequency.replace('_', ' ')|title }}</span>
         <span class="status-badge ok"><span class="material-symbols-outlined">check_circle</span> Setup saved</span>
       </div>
     </div>
@@ -36,7 +36,7 @@
       <strong>Save this dashboard link</strong>
       <p>No login is required yet for this lightweight pilot console. Use private, client-specific links only, and set <code>GROOT_OPS_DASHBOARD_TOKEN</code> before exposing real client data outside a controlled demo.</p>
     </div>
-    <code>{{ dashboard_path }}</code>
+    <code class="dashboard-path-code">{{ dashboard_path }}</code>
   </section>
 
   <section class="dashboard-kpis" aria-label="Lead metrics">
@@ -151,8 +151,8 @@
 
   <section class="dashboard-panel schedule-panel">
     <h2>Automation Schedule</h2>
-    <p><strong>Daily summary:</strong> {{ config.daily_summary_time }} · <strong>Processing:</strong> {{ config.process_leads_frequency.replace('_', ' ') }}</p>
-    <p><strong>Config:</strong> <code>{{ config_path }}</code></p>
+    <p class="schedule-line"><strong>Daily summary:</strong> <span>{{ config.daily_summary_time }}</span> <span class="schedule-divider" aria-hidden="true">·</span> <strong>Processing:</strong> <span>{{ config.process_leads_frequency.replace('_', ' ') }}</span></p>
+    <p class="config-path-line"><strong>Config:</strong> <code>{{ config_path }}</code></p>
   </section>
 </section>
 {% endblock %}
