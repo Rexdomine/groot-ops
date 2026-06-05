@@ -1,6 +1,12 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from groot_ops.ui_app import create_app
+
+
+@pytest.fixture(autouse=True)
+def clear_dashboard_token(monkeypatch):
+    monkeypatch.delenv("GROOT_OPS_DASHBOARD_TOKEN", raising=False)
 
 
 def test_health_route():
