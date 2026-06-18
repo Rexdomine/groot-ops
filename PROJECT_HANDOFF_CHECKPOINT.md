@@ -130,7 +130,12 @@ Done:
 - created live Neon tables for users, sessions, verification/reset tokens, login attempts, clients, client configs, automation runs, audit events, and migration tracking;
 - added `/ready` endpoint that checks DB connectivity without exposing credentials;
 - updated `.env.example` with safe placeholder `DATABASE_URL` and `NEON_API_KEY` fields;
-- verified live Neon schema and `/ready` response;
+- configured Vercel/Vasio project env for Phase 1 DB runtime: `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, and `GROOT_OPS_DB_CONNECT_TIMEOUT=5` exist for Production, Development, and the PR #15 Preview branch;
+- verified live Neon schema and local `/ready` response;
+- hosted Vercel Preview originally reached the app but returned `database.status=connection_failed`; root cause was `uv.lock` missing `psycopg`, so Vercel installed from a stale lock without the DB driver even though `requirements.txt` and `pyproject.toml` were updated;
+- updated `uv.lock` to include `psycopg`/`psycopg-binary` so Vercel installs the Phase 1 DB runtime dependency;
+- added safe server-side DB readiness logging so future Vercel logs reveal the exception class without exposing credentials;
+- redeployed a fresh Vercel Preview from the corrected lockfile and verified hosted `/ready` returns `status=ready` and `database.status=ok`;
 - ran full tests and production readiness check: `69 passed, 1 warning`; readiness passed.
 
 ### Phase 2 — Custom authentication core
@@ -179,7 +184,7 @@ Status: **not started**
 
 Goal:
 
-- set Neon env vars, run tests/readiness, deploy to Vercel production, QA full signup/login/setup/dashboard flow.
+- final production deploy/alias promotion, QA full signup/login/setup/dashboard flow, and confirm every phase-dependent Vercel/Vasio env var or external-service config is present before marking the phase complete.
 
 ## Existing Phase 1.5 foundation before Stable PoC upgrade
 
