@@ -119,15 +119,23 @@ Done:
 
 ### Phase 1 — Neon database foundation
 
-Status: **ready to start**
+Status: **completed**
 
-Goal:
+Done:
 
-- add Neon/Postgres connection, migrations, auth/client tables, and `/ready` endpoint.
+- added Postgres runtime dependency (`psycopg[binary]`);
+- added `src/groot_ops/db.py` for safe DB URL handling, credential-redacted DB labels, configurable-timeout DB connections, and readiness checks;
+- added migration runner at `scripts/apply_migrations.py` with dry-run support and local `.env` loading;
+- added first migration at `migrations/001_auth_and_clients.sql`;
+- created live Neon tables for users, sessions, verification/reset tokens, login attempts, clients, client configs, automation runs, audit events, and migration tracking;
+- added `/ready` endpoint that checks DB connectivity without exposing credentials;
+- updated `.env.example` with safe placeholder `DATABASE_URL` and `NEON_API_KEY` fields;
+- verified live Neon schema and `/ready` response;
+- ran full tests and production readiness check: `65 passed, 1 warning`; readiness passed.
 
 ### Phase 2 — Custom authentication core
 
-Status: **not started**
+Status: **ready to start**
 
 Goal:
 

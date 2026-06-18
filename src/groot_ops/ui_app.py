@@ -8,11 +8,12 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from .config_loader import load_client_config
+from .db import check_database_ready
 from .main_daily_summary import run_daily_summary
 from .main_process_leads import process_leads
 from .owner_notifications import send_owner_setup_confirmation_email as send_setup_confirmation_email
@@ -138,6 +139,19 @@ def create_app() -> FastAPI:
     @app.get("/health")
     def health() -> dict[str, str]:
         return {"status": "ok", "service": "groot-ops-ui"}
+
+    @app.get("/ready")
+    def ready() -> JSONResponse:
+        database = check_database_ready()
+        status_code = 200 if database.ok else 503
+        return JSONResponse(
+            status_code=status_code,
+            content={
+                "status": "ready" if database.ok else "not_ready",
+                "service": "groot-ops-ui",
+                "database": database.as_dict(),
+            },
+        )
 
     @app.get("/", response_class=HTMLResponse)
     def home(request: Request) -> Any:

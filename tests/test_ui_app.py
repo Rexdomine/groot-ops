@@ -18,6 +18,64 @@ def test_health_route():
     assert response.json()["status"] == "ok"
 
 
+def test_ready_route_reports_db_readiness(monkeypatch):
+    class FakeReadiness:
+        ok = True
+        status = "ok"
+        database = "example.com/neondb"
+        message = None
+
+        def as_dict(self):
+            return {
+                "ok": self.ok,
+                "status": self.status,
+                "database": self.database,
+                "message": self.message,
+            }
+
+    monkeypatch.setattr("groot_ops.ui_app.check_database_ready", lambda: FakeReadiness())
+    client = TestClient(create_app())
+
+    response = client.get("/ready")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "ready",
+        "service": "groot-ops-ui",
+        "database": {
+            "ok": True,
+            "status": "ok",
+            "database": "example.com/neondb",
+            "message": None,
+        },
+    }
+
+
+def test_ready_route_returns_503_when_db_not_ready(monkeypatch):
+    class FakeReadiness:
+        ok = False
+        status = "missing_database_url"
+        database = None
+        message = "DATABASE_URL is not configured"
+
+        def as_dict(self):
+            return {
+                "ok": self.ok,
+                "status": self.status,
+                "database": self.database,
+                "message": self.message,
+            }
+
+    monkeypatch.setattr("groot_ops.ui_app.check_database_ready", lambda: FakeReadiness())
+    client = TestClient(create_app())
+
+    response = client.get("/ready")
+
+    assert response.status_code == 503
+    assert response.json()["status"] == "not_ready"
+    assert response.json()["database"]["status"] == "missing_database_url"
+
+
 def test_homepage_uses_stitch_inspired_production_sections():
     client = TestClient(create_app())
 
