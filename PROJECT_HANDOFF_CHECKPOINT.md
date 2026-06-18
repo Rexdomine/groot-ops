@@ -140,9 +140,9 @@ Done:
 
 ### Phase 2 — Custom authentication core
 
-Status: **in progress on `feat/phase2-custom-auth`**
+Status: **completed and merged to `main` via PR #16**
 
-Done locally:
+Completed:
 
 - added `src/groot_ops/auth.py` with PBKDF2 password hashing, opaque random session tokens, SHA-256 session-token storage, login-attempt recording, and Neon-backed user/session operations;
 - added `/signup`, `/login`, and `/logout` routes with HttpOnly SameSite=Lax session cookies;
@@ -150,14 +150,15 @@ Done locally:
 - updated home/header CTA behavior for anonymous vs authenticated users;
 - added login/signup templates and styles;
 - updated tests so old `/setup?token=...` links no longer grant access;
-- verified local test suite: `77 passed, 1 warning`;
+- verified local test suite after final merge: `78 passed, 1 warning`;
 - verified production readiness check and migration dry-run;
-- verified live Neon auth smoke using a throwaway user/session and cleaned it up.
+- verified live Neon auth smoke using a throwaway user/session and cleaned it up;
+- NightWing QA reviewed Phase 2 and returned PASS after the legacy token email-link blocker was fixed.
 
 Hosted verification completed:
 
 - Phase 2 PR: https://github.com/Rexdomine/groot-ops/pull/16
-- Vercel Preview: `https://groot-dn6hfx5f0-rexdomines-projects.vercel.app`
+- Latest clean-history Vercel Preview: `https://groot-ire5reru4-rexdomines-projects.vercel.app`
 - `/ready` returned `status=ready` and `database.status=ok`.
 - Anonymous `/setup` redirects to `/login?next=%2Fsetup`.
 - Hosted `/signup` creates a secure HttpOnly session and redirects to `/setup`.
@@ -166,11 +167,6 @@ Hosted verification completed:
 - The same session is blocked from `/setup` after logout.
 - Hosted QA used Vercel's official automation protection bypass header for Preview testing; the bypass secret is not committed or logged.
 - Throwaway hosted test user/session was cleaned from Neon after verification.
-
-Remaining before completion:
-
-- run NightWing QA;
-- report PR checks/preview status.
 
 ### Phase 3 — Account recovery and verification
 
