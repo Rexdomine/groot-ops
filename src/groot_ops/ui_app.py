@@ -9,7 +9,7 @@ from io import StringIO
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi import FastAPI, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -81,13 +81,23 @@ def _validate_signup_form(full_name: str, email: str, password: str) -> list[str
     return errors
 
 
+def _session_cookie_secure(request: Request) -> bool:
+    configured = os.getenv("GROOT_OPS_SESSION_COOKIE_SECURE", "").strip().lower()
+    if configured in {"1", "true", "yes", "on"}:
+        return True
+    if configured in {"0", "false", "no", "off"}:
+        return False
+    public_base_url = os.getenv("GROOT_OPS_PUBLIC_BASE_URL", "").strip().lower()
+    return request.url.scheme == "https" or public_base_url.startswith("https://") or bool(os.getenv("VERCEL"))
+
+
 def _set_session_cookie(response: RedirectResponse, token: str, *, request: Request) -> None:
     response.set_cookie(
         SESSION_COOKIE_NAME,
         token,
         max_age=SESSION_DAYS * 24 * 60 * 60,
         httponly=True,
-        secure=request.url.scheme == "https",
+        secure=_session_cookie_secure(request),
         samesite="lax",
     )
 
@@ -96,7 +106,7 @@ def _clear_session_cookie(response: RedirectResponse, *, request: Request) -> No
     response.delete_cookie(
         SESSION_COOKIE_NAME,
         httponly=True,
-        secure=request.url.scheme == "https",
+        secure=_session_cookie_secure(request),
         samesite="lax",
     )
 
@@ -153,17 +163,14 @@ def create_app(*, auth_backend: Any | None = None) -> FastAPI:
     app = FastAPI(title="Groot Ops Demo UI", version="0.1.0")
     app.mount("/static", StaticFiles(directory=PACKAGE_DIR / "static"), name="static")
     templates = Jinja2Templates(directory=str(PACKAGE_DIR / "templates"))
-    auth_backend = auth_backend or DatabaseAuthBackend()
+    auth_service: Any = auth_backend or DatabaseAuthBackend()
 
     @app.middleware("http")
     async def attach_user_and_protect_routes(request: Request, call_next: Any) -> Any:
         request.state.current_user = None
         session_token = request.cookies.get(SESSION_COOKIE_NAME, "")
         if session_token:
-            try:
-                request.state.current_user = auth_backend.get_user_for_session(session_token)
-            except Exception:
-                request.state.current_user = None
+            request.state.current_user = auth_service.get_user_for_session(session_token)
         if _is_protected_ui_path(request.url.path) and request.state.current_user is None:
             return _login_redirect_for(request)
         return await call_next(request)
@@ -218,20 +225,21 @@ def create_app(*, auth_backend: Any | None = None) -> FastAPI:
                 status_code=400,
             )
         try:
-            user = auth_backend.create_user(email=email, password=password, full_name=full_name)
-            session = auth_backend.create_session(
-                user_id=user.id,
-                user_agent=request.headers.get("user-agent", ""),
-                ip_address=request.client.host if request.client else "",
-            )
-        except AttributeError:
-            # Test backends can create the session as part of authentication instead of exposing create_session.
-            session = auth_backend.authenticate_user(
-                email=email,
-                password=password,
-                user_agent=request.headers.get("user-agent", ""),
-                ip_address=request.client.host if request.client else "",
-            )
+            user = auth_service.create_user(email=email, password=password, full_name=full_name)
+            if hasattr(auth_service, "create_session"):
+                session = auth_service.create_session(
+                    user_id=user.id,
+                    user_agent=request.headers.get("user-agent", ""),
+                    ip_address=request.client.host if request.client else "",
+                )
+            else:
+                # Test backends can create the session as part of authentication instead of exposing create_session.
+                session = auth_service.authenticate_user(
+                    email=email,
+                    password=password,
+                    user_agent=request.headers.get("user-agent", ""),
+                    ip_address=request.client.host if request.client else "",
+                )
         except AuthError as exc:
             return templates.TemplateResponse(
                 request,
@@ -257,7 +265,7 @@ def create_app(*, auth_backend: Any | None = None) -> FastAPI:
         return response
 
     @app.get("/login", response_class=HTMLResponse)
-    def login_form(request: Request, next: str = "/setup", logged_out: str = "") -> Any:
+    def login_form(request: Request, next_path: str = Query("/setup", alias="next"), logged_out: str = "") -> Any:
         return templates.TemplateResponse(
             request,
             "login.html",
@@ -265,7 +273,7 @@ def create_app(*, auth_backend: Any | None = None) -> FastAPI:
                 request,
                 errors=[],
                 values={},
-                next_path=_safe_next_path(next),
+                next_path=_safe_next_path(next_path),
                 logged_out=bool(logged_out),
                 configs=list_demo_configs(),
             ),
@@ -276,11 +284,11 @@ def create_app(*, auth_backend: Any | None = None) -> FastAPI:
         request: Request,
         email: str = Form(""),
         password: str = Form(""),
-        next: str = "/setup",
+        next_path: str = Query("/setup", alias="next"),
     ) -> Any:
-        next_path = _safe_next_path(next)
+        redirect_path = _safe_next_path(next_path)
         try:
-            session = auth_backend.authenticate_user(
+            session = auth_service.authenticate_user(
                 email=email,
                 password=password,
                 user_agent=request.headers.get("user-agent", ""),
@@ -294,13 +302,13 @@ def create_app(*, auth_backend: Any | None = None) -> FastAPI:
                     request,
                     errors=[str(exc)],
                     values={"email": email},
-                    next_path=next_path,
+                    next_path=redirect_path,
                     logged_out=False,
                     configs=list_demo_configs(),
                 ),
                 status_code=401,
             )
-        response = RedirectResponse(url=next_path, status_code=303)
+        response = RedirectResponse(url=redirect_path, status_code=303)
         _set_session_cookie(response, session.token, request=request)
         return response
 
@@ -308,10 +316,7 @@ def create_app(*, auth_backend: Any | None = None) -> FastAPI:
     def logout(request: Request) -> RedirectResponse:
         token = request.cookies.get(SESSION_COOKIE_NAME, "")
         if token:
-            try:
-                auth_backend.revoke_session(token)
-            except Exception:
-                pass
+            auth_service.revoke_session(token)
         response = RedirectResponse(url="/login?logged_out=1", status_code=303)
         _clear_session_cookie(response, request=request)
         return response

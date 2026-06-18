@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
+import os
 import secrets
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -10,8 +11,10 @@ from typing import Any
 
 from .db import connect_database
 
-PASSWORD_ALGORITHM = "pbkdf2_sha256"
+HASH_ALGORITHM = "pbkdf2_sha256"
 HASH_ITERATIONS = 260_000
+LOGIN_RATE_LIMIT_MAX_FAILURES = 5
+LOGIN_RATE_LIMIT_WINDOW_MINUTES = 15
 SESSION_COOKIE_NAME = "groot_ops_session"
 SESSION_DAYS = 14
 
@@ -52,13 +55,13 @@ def _b64decode(value: str) -> bytes:
 def hash_password(password: str, *, iterations: int = HASH_ITERATIONS) -> str:
     salt = secrets.token_bytes(16)
     digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations)
-    return f"{PASSWORD_ALGORITHM}${iterations}${_b64encode(salt)}${_b64encode(digest)}"
+    return f"{HASH_ALGORITHM}${iterations}${_b64encode(salt)}${_b64encode(digest)}"
 
 
 def verify_password(password: str, stored_hash: str) -> bool:
     try:
         algorithm, iteration_text, salt_text, digest_text = stored_hash.split("$", 3)
-        if algorithm != PASSWORD_ALGORITHM:
+        if algorithm != HASH_ALGORITHM:
             return False
         iterations = int(iteration_text)
         salt = _b64decode(salt_text)
@@ -77,11 +80,15 @@ def hash_session_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
+def _ip_hash_secret() -> str:
+    return os.getenv("GROOT_OPS_IP_HASH_SECRET") or os.getenv("GROOT_OPS_SESSION_SECRET") or "local-development-only"
+
+
 def hash_ip_address(ip_address: str) -> str:
     cleaned = (ip_address or "").strip()
     if not cleaned:
         return ""
-    return hashlib.sha256(cleaned.encode("utf-8")).hexdigest()
+    return hmac.new(_ip_hash_secret().encode("utf-8"), cleaned.encode("utf-8"), hashlib.sha256).hexdigest()
 
 
 def _user_from_row(row: Any) -> AuthUser:
@@ -132,6 +139,7 @@ class DatabaseAuthBackend:
         try:
             with self._connect() as conn:
                 with conn.cursor() as cur:
+                    self._raise_if_login_rate_limited(cur, email_normalized=email_normalized, ip_hash=ip_hash)
                     cur.execute(
                         """
                         SELECT id, email, full_name, role, status, password_hash
@@ -177,6 +185,22 @@ class DatabaseAuthBackend:
             return AuthSession(user=user, token=token, expires_at=expires_at)
         except AuthError:
             raise
+
+    def _raise_if_login_rate_limited(self, cur: Any, *, email_normalized: str, ip_hash: str) -> None:
+        cur.execute(
+            """
+            SELECT count(*)
+            FROM login_attempts
+            WHERE success = false
+              AND created_at >= now() - (%s * interval '1 minute')
+              AND (email_normalized = %s OR (%s <> '' AND ip_hash = %s))
+            """,
+            (LOGIN_RATE_LIMIT_WINDOW_MINUTES, email_normalized, ip_hash, ip_hash),
+        )
+        row = cur.fetchone()
+        failed_attempts = int(row[0]) if row else 0
+        if failed_attempts >= LOGIN_RATE_LIMIT_MAX_FAILURES:
+            raise AuthError("Too many failed login attempts. Please wait 15 minutes and try again.")
 
     def create_session(
         self, *, user_id: str, user_agent: str = "", ip_address: str = ""

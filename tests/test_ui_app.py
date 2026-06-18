@@ -14,6 +14,9 @@ class InMemoryAuthBackend:
         self.revoked_hashes = set()
 
     def create_user(self, *, email: str, password: str, full_name: str):
+        email_normalized = auth.normalize_email(email)
+        if email_normalized in self.users_by_email:
+            raise auth.AuthError("An account with this email already exists.")
         user = auth.AuthUser(
             id="00000000-0000-0000-0000-%012d" % (len(self.users_by_email) + 1),
             email=email.strip(),
@@ -21,7 +24,7 @@ class InMemoryAuthBackend:
             role="user",
             status="active",
         )
-        self.users_by_email[auth.normalize_email(email)] = {
+        self.users_by_email[email_normalized] = {
             "user": user,
             "password_hash": auth.hash_password(password),
         }
@@ -69,6 +72,7 @@ def authenticated_client() -> TestClient:
 @pytest.fixture(autouse=True)
 def clear_dashboard_token(monkeypatch):
     monkeypatch.delenv("GROOT_OPS_DASHBOARD_TOKEN", raising=False)
+    monkeypatch.delenv("GROOT_OPS_SESSION_COOKIE_SECURE", raising=False)
 
 
 def test_health_route():
@@ -158,6 +162,7 @@ def test_homepage_uses_stitch_inspired_production_sections():
 
 
 def test_session_auth_protects_setup_and_client_routes(monkeypatch):
+    # Legacy dashboard-token auth must remain ignored after moving to session auth.
     monkeypatch.setenv("GROOT_OPS_DASHBOARD_TOKEN", "pilot-secret")
     client = TestClient(create_app(auth_backend=InMemoryAuthBackend()))
 
@@ -189,6 +194,7 @@ def test_setup_sends_friendly_email_with_private_dashboard_link(monkeypatch, tmp
 
     monkeypatch.setenv("GROOT_OPS_DASHBOARD_TOKEN", "pilot-secret")
     monkeypatch.setenv("GROOT_OPS_PUBLIC_BASE_URL", "https://groot-ops.vercel.app")
+    monkeypatch.setenv("GROOT_OPS_SESSION_COOKIE_SECURE", "false")
     monkeypatch.setenv("GROOT_OPS_DEMO_CONFIG_DIR", str(tmp_path))
     monkeypatch.setattr("groot_ops.ui_app.send_setup_confirmation_email", fake_send_setup_confirmation_email)
     client = authenticated_client()

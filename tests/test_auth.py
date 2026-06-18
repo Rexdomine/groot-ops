@@ -65,6 +65,43 @@ def test_password_hashing_is_salted_and_verifiable():
     assert auth.verify_password("wrong password", first) is False
 
 
+def test_ip_hash_uses_deployment_secret(monkeypatch):
+    monkeypatch.setenv("GROOT_OPS_IP_HASH_SECRET", "first-secret")
+    first = auth.hash_ip_address("203.0.113.10")
+
+    monkeypatch.setenv("GROOT_OPS_IP_HASH_SECRET", "second-secret")
+    second = auth.hash_ip_address("203.0.113.10")
+
+    assert first != second
+    assert auth.hash_ip_address("") == ""
+
+
+def test_login_rate_limit_rejects_after_threshold():
+    class FakeCursor:
+        def __init__(self):
+            self.query = ""
+            self.params = None
+
+        def execute(self, query, params):
+            self.query = query
+            self.params = params
+
+        def fetchone(self):
+            return (auth.LOGIN_RATE_LIMIT_MAX_FAILURES,)
+
+    cursor = FakeCursor()
+    backend = auth.DatabaseAuthBackend(connect=lambda: None)
+
+    try:
+        backend._raise_if_login_rate_limited(cursor, email_normalized="ada@example.com", ip_hash="ip-hash")
+    except auth.AuthError as exc:
+        assert "Too many failed login attempts" in str(exc)
+    else:
+        raise AssertionError("expected rate limit AuthError")
+    assert "login_attempts" in cursor.query
+    assert cursor.params == (auth.LOGIN_RATE_LIMIT_WINDOW_MINUTES, "ada@example.com", "ip-hash", "ip-hash")
+
+
 def test_signup_creates_http_only_session_and_redirects_to_setup():
     backend = InMemoryAuthBackend()
     client = TestClient(create_app(auth_backend=backend))
