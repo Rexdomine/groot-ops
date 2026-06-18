@@ -1,6 +1,6 @@
 # Groot Ops — Project Handoff Checkpoint
 
-Last updated: 2026-06-18
+Last updated: 2026-06-18 — end-of-day checkpoint after Phase 2 and PR #18
 
 ## Read first when resuming
 
@@ -140,7 +140,7 @@ Done:
 
 ### Phase 2 — Custom authentication core
 
-Status: **completed and merged to `main` via PR #16**
+Status: **completed and merged to `main` via PR #16; follow-up hardening PR #18 is also merged**
 
 Completed:
 
@@ -167,6 +167,24 @@ Hosted verification completed:
 - The same session is blocked from `/setup` after logout.
 - Hosted QA used Vercel's official automation protection bypass header for Preview testing; the bypass secret is not committed or logged.
 - Throwaway hosted test user/session was cleaned from Neon after verification.
+
+Follow-up CodeRabbit/NightWing hardening on PR #18:
+
+- PR: https://github.com/Rexdomine/groot-ops/pull/18
+- Branch: `fix/pr16-coderabbit-review`
+- Latest commit: `33c5fd9 fix: address pr18 coderabbit findings`
+- Status at pause: merged to `main` on GitHub at `2026-06-18T14:56:19Z`; all GitHub/Vercel/CodeRabbit/GitGuardian checks were passing before merge.
+- No further PR #18 action is needed unless Rex asks for cleanup or follow-up hardening.
+- Changes in PR #18:
+  - fail-closed IP hashing when neither `GROOT_OPS_IP_HASH_SECRET` nor `GROOT_OPS_SESSION_SECRET` is configured;
+  - transaction-scoped PostgreSQL advisory locks around email/IP login-rate-limit buckets;
+  - regression coverage proving `authenticate_user()` rejects rate-limited attempts before user lookup;
+  - UI test fixture isolation for `GROOT_OPS_PUBLIC_BASE_URL` and `VERCEL`.
+- Verification for PR #18:
+  - `python3 -m pytest tests/test_auth.py tests/test_ui_app.py -q` => `25 passed, 1 warning`;
+  - `python3 -m pytest -q` => `82 passed, 1 warning`;
+  - `python3 -m compileall -q src tests` => passed;
+  - NightWing QA: no blocking concerns.
 
 ### Phase 3 — Account recovery and verification
 
@@ -233,17 +251,17 @@ Existing current problem addressed by Phase 2:
 
 Current local branch when checkpointed:
 
-- `feat/phase2-custom-auth`
+- `fix/pr16-coderabbit-review`
 
 Remote tracking branch:
 
-- not pushed yet at this checkpoint
+- `origin/fix/pr16-coderabbit-review`
 
-Current branch contains Phase 2 auth work beyond `origin/main`:
+Current local branch contains this checkpoint-doc commit beyond `origin/main`; PR #18 code itself has already been merged:
 
-- app-owned signup/login/logout/session auth;
-- removed token wall from normal user routes;
-- tests/docs/env-template updates.
+- `50eca06 docs: checkpoint groot ops pause state`
+
+`origin/main` includes Phase 2 via PR #16, `b091014 docs: mark phase two complete`, and PR #18 hardening through `33c5fd9`.
 
 Untracked local demo configs should remain local/ignored and must not enter PRs.
 
@@ -339,7 +357,8 @@ Public deployment checks:
 ## Immediate next steps when resuming
 
 1. Run `git status --short --branch`.
-2. Review planning docs and ensure no secrets are present.
-3. Decide whether to commit planning docs on current branch.
-4. Resolve or intentionally leave the untracked demo client config.
-5. Begin Phase 1 from `docs/plans/2026-06-18-stable-poc-auth-neon-rollout.md`.
+2. Sync with `origin/main` and verify PR #18 is still merged/closed: https://github.com/Rexdomine/groot-ops/pull/18.
+3. Preserve or reapply this checkpoint-doc commit if it is useful, then return to a clean branch from `origin/main` before new work.
+4. Continue from Phase 3 in `docs/plans/2026-06-18-stable-poc-auth-neon-rollout.md`.
+5. Next build phase: email verification, password reset, change password, and logout-all-sessions.
+6. Then continue with Phase 4 dashboard persistence/user-owned configs, Phase 5 admin controls, Phase 6 CSRF/rate-limit/security/audit hardening, and Phase 7 pilot QA + Vercel production deployment.
