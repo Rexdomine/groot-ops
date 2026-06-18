@@ -21,6 +21,7 @@ service-account*.json
 configs/*.local.yaml
 configs/*rex*.yaml
 configs/*private*.yaml
+configs/demo_clients/
 
 # Generated local activity logs
 data/activity_log.csv

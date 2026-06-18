@@ -107,23 +107,19 @@ Storage discipline: store app/account/config/run metadata in Neon, not full lead
 
 ### Phase 0 — Planning lock and repo hygiene
 
-Status: **in progress / mostly complete**
+Status: **completed**
 
 Done:
 
 - locked Stable PoC architecture in `docs/POC_SYSTEM_DESIGN.md`;
 - created implementation plan at `docs/plans/2026-06-18-stable-poc-auth-neon-rollout.md`;
-- updated this checkpoint.
-
-Remaining:
-
-- review current git branch and untracked demo client config;
-- commit the planning docs if appropriate;
-- then begin Phase 1.
+- updated this checkpoint;
+- committed planning docs in `82c7292 docs: lock stable poc architecture`;
+- added `configs/demo_clients/` to `.gitignore` so local demo/source-of-truth configs stay local and do not enter PRs.
 
 ### Phase 1 — Neon database foundation
 
-Status: **not started**
+Status: **ready to start**
 
 Goal:
 
