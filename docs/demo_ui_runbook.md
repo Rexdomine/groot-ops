@@ -2,12 +2,10 @@
 
 ## Purpose
 
-This UI is a guided demo console for real estate agents. It shows how simple Groot Ops is to configure without turning the pilot into a full SaaS platform too early.
+This UI is a guided demo console for real estate agents. It shows how simple Groot Ops is to configure without turning the Phase 2A pilot into a full SaaS platform too early.
 
 ## What the demo UI does
 
-- Lets a user create a Groot Ops account with email/password.
-- Uses server-side sessions with an HttpOnly cookie for `/setup`, `/dashboard`, and `/clients/*`.
 - Collects business profile details.
 - Accepts a Google Sheet URL or spreadsheet ID.
 - Records owner notification preferences.
@@ -23,8 +21,6 @@ This UI is a guided demo console for real estate agents. It shows how simple Gro
 - It does not auto-create Hermes cron jobs.
 - It does not store API keys in config files.
 - It does not replace the realtor’s CRM.
-- It does not yet provide email verification, password reset, change-password, or logout-all-sessions flows; those are Phase 3.
-- It does not yet persist user-owned client configs/dashboards in Neon; that is Phase 4.
 
 ## Local setup
 
@@ -43,10 +39,8 @@ uv run --extra ui python -m groot_ops.main_ui --host 127.0.0.1 --port 8080
 Open:
 
 ```text
-http://127.0.0.1:8080/signup
+http://127.0.0.1:8080/setup
 ```
-
-Create an account, then use `/setup` and `/dashboard` normally. Anonymous access to `/setup`, `/dashboard`, and `/clients/*` redirects to `/login?next=...`.
 
 ## Required environment variables
 
@@ -63,26 +57,28 @@ vercel env add MATON_API_KEY production
 vercel env add MATON_API_KEY preview
 ```
 
-For Neon-backed auth/session readiness:
+For protected pilot dashboards, set a long random token in every Vercel environment you expose:
 
 ```bash
-vercel env add DATABASE_URL production
-vercel env add DATABASE_URL preview
-vercel env add DATABASE_URL_UNPOOLED production
-vercel env add DATABASE_URL_UNPOOLED preview
-vercel env add GROOT_OPS_DB_CONNECT_TIMEOUT production
-vercel env add GROOT_OPS_DB_CONNECT_TIMEOUT preview
+vercel env add GROOT_OPS_DASHBOARD_TOKEN production
+vercel env add GROOT_OPS_DASHBOARD_TOKEN preview
 ```
 
-`GROOT_OPS_DASHBOARD_TOKEN` is obsolete for normal user routes. Do not add it for new environments and do not include `?token=` links in setup, dashboard, or owner email flows.
+When `GROOT_OPS_DASHBOARD_TOKEN` is set, `/setup`, `/dashboard`, and `/clients/*` require either:
+
+- `?token=<token>` in the private setup/dashboard link,
+- the `groot_ops_dashboard_token` cookie set after opening a valid token link, or
+- `X-Groot-Ops-Dashboard-Token: <token>` for scripted checks.
+
+Do not paste the token into GitHub, public docs, or client-facing screenshots.
 
 ## Vercel deployment shape
 
-The repo includes:
+The repo now includes:
 
 - `api/index.py` — Vercel Python entrypoint.
 - `vercel.json` — routes all web traffic to the FastAPI app.
-- `requirements.txt`, `pyproject.toml`, and `uv.lock` — dependencies Vercel installs.
+- `requirements.txt` — dependencies Vercel installs.
 
 Deploy flow once Vercel access is connected:
 
@@ -90,12 +86,8 @@ Deploy flow once Vercel access is connected:
 vercel link
 vercel env add MATON_API_KEY production
 vercel env add MATON_API_KEY preview
-vercel env add DATABASE_URL production
-vercel env add DATABASE_URL preview
-vercel env add DATABASE_URL_UNPOOLED production
-vercel env add DATABASE_URL_UNPOOLED preview
-vercel env add GROOT_OPS_DB_CONNECT_TIMEOUT production
-vercel env add GROOT_OPS_DB_CONNECT_TIMEOUT preview
+vercel env add GROOT_OPS_DASHBOARD_TOKEN production
+vercel env add GROOT_OPS_DASHBOARD_TOKEN preview
 vercel deploy
 ```
 
@@ -105,25 +97,22 @@ For production aliasing later:
 vercel deploy --prod
 ```
 
-For protected Preview QA, keep Vercel Deployment Protection enabled and use Vercel’s official automation protection bypass secret/header for scripted checks. Never commit or log the bypass secret.
-
 ## 5-minute realtor demo script
 
 1. Open the homepage.
 2. Say: “Groot Ops works with the Google Sheet you already use.”
-3. Click **Create account** or **Start setup**.
-4. Create/login to a Groot Ops account.
-5. Fill in the brokerage/agent details.
-6. Paste the Google Sheet URL.
-7. Choose Telegram or email as the owner notification preference.
-8. Keep default automation rules.
-9. Click **Save setup & validate sheet**.
-10. Open the dashboard.
-11. Run **Daily summary preview**.
-12. Run **Preview lead drafts**.
-13. Explain: “No customer messages are sent automatically. You stay in control. Groot identifies the hot leads and drafts the follow-up.”
-14. Click **Mark pilot active** once the previews look right.
-15. Close with: “The pilot config is now marked active. We enable the operator scheduler separately when you approve recurring runs.”
+3. Click **Start demo setup**.
+4. Fill in the brokerage/agent details.
+5. Paste the Google Sheet URL.
+6. Choose Telegram or email as the owner notification preference.
+7. Keep default automation rules.
+8. Click **Save setup & validate sheet**.
+9. Open the dashboard.
+10. Run **Daily summary preview**.
+11. Run **Preview lead drafts**.
+12. Explain: “No customer messages are sent automatically. You stay in control. Groot identifies the hot leads and drafts the follow-up.”
+13. Click **Mark pilot active** once the previews look right.
+14. Close with: “The pilot config is now marked active. We enable the operator scheduler separately when you approve recurring runs.”
 
 ## Troubleshooting
 
@@ -142,8 +131,8 @@ Check:
 
 ### Vercel notes
 
-Serverless files are ephemeral. Demo configs are written to `/tmp/groot-ops-demo-configs` on Vercel unless `GROOT_OPS_DEMO_CONFIG_DIR` is set. This is acceptable for the lightweight demo. Persistent user-owned multi-client storage is Phase 4.
+Serverless files are ephemeral. Demo configs are written to `/tmp/groot-ops-demo-configs` on Vercel unless `GROOT_OPS_DEMO_CONFIG_DIR` is set. This is acceptable for a lightweight demo, but persistent multi-client storage should come later with a database or hosted config store.
 
-### Redirected to login
+### `Dashboard access required`
 
-This is expected when no valid Groot Ops session cookie is present. Login at `/login`; after successful login the app returns to the protected `next` URL when it is safe.
+`GROOT_OPS_DASHBOARD_TOKEN` is set, but the request did not include the private token link or token cookie. Reopen `/setup?token=<token>` or `/clients/<client_id>/dashboard?token=<token>`.

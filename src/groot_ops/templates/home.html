@@ -7,11 +7,11 @@
     <h1>Turn real estate leads into daily follow-up action.</h1>
     <p class="lede">Groot Ops watches your lead sheet, prioritizes the people who need attention, and prepares follow-up drafts your team can approve before anything is sent.</p>
     <div class="actions center-actions">
-      <a class="button primary large" href="{% if current_user %}/setup{% else %}/signup{% endif %}">Start setup</a>
+      <a class="button primary large" href="/setup">Start setup</a>
       {% if configs %}
-        <a class="button secondary large" href="{% if current_user %}/clients/{{ configs[0].stem }}/dashboard{% else %}/login?next=/dashboard{% endif %}">View lead dashboard</a>
+        <a class="button secondary large" href="/clients/{{ configs[0].stem }}/dashboard">View lead dashboard</a>
       {% else %}
-        <a class="button secondary large" href="{% if current_user %}/setup{% else %}/login?next=/setup{% endif %}">View lead dashboard</a>
+        <a class="button secondary large" href="/setup">View lead dashboard</a>
       {% endif %}
     </div>
   </div>
@@ -105,6 +105,6 @@
 
 <section class="final-cta">
   <h2>Ready to stop losing leads?</h2>
-  <a class="button primary jumbo" href="{% if current_user %}/setup{% else %}/signup{% endif %}">Set up Groot Ops</a>
+  <a class="button primary jumbo" href="/setup">Set up Groot Ops</a>
 </section>
 {% endblock %}

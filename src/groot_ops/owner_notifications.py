@@ -58,7 +58,12 @@ def _html_button(label: str, href: str, *, primary: bool = False) -> str:
 def _dashboard_url(config: ClientConfig) -> str:
     base_url = os.environ.get("GROOT_OPS_PUBLIC_BASE_URL", "").strip().rstrip("/")
     path = f"/clients/{urllib.parse.quote(config.client_id)}/dashboard"
-    return f"{base_url}{path}" if base_url else path
+    url = f"{base_url}{path}" if base_url else path
+    dashboard_token = os.environ.get("GROOT_OPS_DASHBOARD_TOKEN", "").strip()
+    if dashboard_token:
+        separator = "&" if "?" in url else "?"
+        url = f"{url}{separator}token={urllib.parse.quote(dashboard_token)}"
+    return url
 
 
 def _metric_card(label: str, value: int, caption: str, *, accent: str = "#c1ecd4") -> str:
@@ -221,7 +226,7 @@ def build_owner_setup_confirmation_email(
             f"Hi {config.agent_name or 'there'},",
             "Your Groot Ops lead follow-up workspace has been created.",
             "",
-            "Your dashboard:",
+            "Your private dashboard:",
             dashboard_url,
             "",
             "Setup summary:",
@@ -232,14 +237,14 @@ def build_owner_setup_confirmation_email(
             f"- Lead processing: {frequency_label}",
             "",
             "What to do next:",
-            "1. Open the dashboard from this email.",
+            "1. Open the private dashboard from this email.",
             "2. Run the daily summary preview.",
             "3. Review lead follow-up drafts before any live outreach.",
             "4. Mark the pilot active only after the previews look right.",
             "",
             "Safety: No customer messages are sent automatically during the pilot. Groot prepares summaries and drafts for human review.",
             "",
-            "Keep this email so you can return to your dashboard anytime.",
+            "Keep this email so you can return to your private dashboard anytime.",
         ]
     )
     html_body = f"""
@@ -249,10 +254,10 @@ def build_owner_setup_confirmation_email(
           <div style="display:inline-block;background:#c1ecd4;color:#012d1d;border-radius:999px;padding:7px 12px;font-weight:900;font-size:12px;letter-spacing:.08em;text-transform:uppercase;">Groot Ops command center</div>
           <h1 style="margin:16px 0 10px;font-size:31px;line-height:1.05;letter-spacing:-.04em;color:#ffffff;">Your setup is ready</h1>
           <p style="margin:0;color:#c1ecd4;font-size:15px;line-height:1.5;">{escape(config.business_name)} is ready for safe lead follow-up previews.</p>
-          <div style="margin-top:24px;">{_html_button('Open dashboard', dashboard_url)}</div>
+          <div style="margin-top:24px;">{_html_button('Open private dashboard', dashboard_url)}</div>
         </div>
         <div style="background:#ffffff;border:1px solid #dbe4ed;border-top:0;border-radius:0 0 30px 30px;padding:24px;box-shadow:0 20px 40px rgba(0,0,0,.08);">
-          <p style="margin:0 0 18px;color:#414844;font-size:15px;line-height:1.55;">Hi {escape(config.agent_name or 'there')}, Groot Ops saved your lead follow-up workspace. Use the dashboard button above whenever you want to check setup health, preview owner summaries, or review lead drafts.</p>
+          <p style="margin:0 0 18px;color:#414844;font-size:15px;line-height:1.55;">Hi {escape(config.agent_name or 'there')}, Groot Ops saved your lead follow-up workspace. Use the private dashboard button above whenever you want to check setup health, preview owner summaries, or review lead drafts.</p>
 
           <div style="background:#ecf5fe;border:1px solid #dbe4ed;border-radius:22px;padding:18px;margin-bottom:18px;">
             <h2 style="font-size:18px;line-height:1.2;margin:0 0 12px;color:#012d1d;">Setup overview</h2>
@@ -268,7 +273,7 @@ def build_owner_setup_confirmation_email(
           <div style="margin-bottom:18px;">
             <h2 style="font-size:18px;line-height:1.2;margin:0 0 10px;color:#012d1d;">What to do next</h2>
             <ol style="margin:0;padding-left:20px;color:#414844;font-size:14px;line-height:1.7;">
-              <li>Open your dashboard from this email.</li>
+              <li>Open your private dashboard from this email.</li>
               <li>Run the daily summary preview to confirm the owner update is useful.</li>
               <li>Preview lead follow-up drafts and approve the tone before live outreach.</li>
               <li>Mark the pilot active only after the previews look right.</li>
@@ -282,11 +287,11 @@ def build_owner_setup_confirmation_email(
 
           <div style="background:#fff8e7;border:1px solid #ffdf9c;border-radius:20px;padding:16px;margin-bottom:18px;">
             <strong style="display:block;color:#5b4300;margin-bottom:5px;">Keep this email</strong>
-            <p style="margin:0;color:#5b4300;font-size:14px;line-height:1.45;">This is your easiest way back to the dashboard. Sign in with your Groot Ops account whenever you need to return.</p>
+            <p style="margin:0;color:#5b4300;font-size:14px;line-height:1.45;">This is your easiest way back to the private dashboard. You do not need to memorize or manually paste a token.</p>
           </div>
 
           <div style="text-align:center;margin:24px 0 6px;">
-            {_html_button('Open dashboard', dashboard_url, primary=True)}
+            {_html_button('Open private dashboard', dashboard_url, primary=True)}
             <p style="margin:12px 0 0;color:#717973;font-size:12px;line-height:1.4;">Groot Ops • Lead follow-up automation for real estate teams</p>
           </div>
         </div>

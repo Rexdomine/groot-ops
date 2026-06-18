@@ -19,23 +19,13 @@
       <nav class="main-nav" aria-label="Primary navigation">
         <a href="/#product">Product</a>
         <a href="/#how-it-works">How it works</a>
-        {% if current_user %}
-          <a href="/setup">Setup</a>
-          {% if configs %}<a href="/clients/{{ configs[0].stem }}/dashboard">Dashboard</a>{% else %}<a href="/dashboard">Dashboard</a>{% endif %}
-        {% else %}
-          <a href="/login">Login</a>
-          <a href="/signup">Sign up</a>
-        {% endif %}
+        <a href="/setup">Setup</a>
+        {% if configs %}<a href="/clients/{{ configs[0].stem }}/dashboard">Dashboard</a>{% endif %}
       </nav>
-      {% if current_user %}
-        <form class="nav-logout-form" method="post" action="/logout">
-          <span class="nav-user">{{ current_user.full_name }}</span>
-          <button class="nav-cta" type="submit">Logout</button>
-        </form>
-      {% elif configs %}
-        <a class="nav-cta" href="/login?next=/dashboard">Open dashboard</a>
+      {% if configs %}
+        <a class="nav-cta" href="/clients/{{ configs[0].stem }}/dashboard">Open dashboard</a>
       {% else %}
-        <a class="nav-cta" href="/signup">Start setup</a>
+        <a class="nav-cta" href="/setup">Start setup</a>
       {% endif %}
     </div>
   </header>

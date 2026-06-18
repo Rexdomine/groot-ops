@@ -1,69 +1,7 @@
-from datetime import datetime, timezone
-
 import pytest
 from fastapi.testclient import TestClient
 
-from groot_ops import auth
 from groot_ops.ui_app import create_app
-
-
-class InMemoryAuthBackend:
-    def __init__(self):
-        self.users_by_email = {}
-        self.sessions_by_hash = {}
-        self.revoked_hashes = set()
-
-    def create_user(self, *, email: str, password: str, full_name: str):
-        user = auth.AuthUser(
-            id="00000000-0000-0000-0000-%012d" % (len(self.users_by_email) + 1),
-            email=email.strip(),
-            full_name=full_name.strip(),
-            role="user",
-            status="active",
-        )
-        self.users_by_email[auth.normalize_email(email)] = {
-            "user": user,
-            "password_hash": auth.hash_password(password),
-        }
-        return user
-
-    def authenticate_user(self, *, email: str, password: str, user_agent: str = "", ip_address: str = ""):
-        record = self.users_by_email.get(auth.normalize_email(email))
-        if not record or not auth.verify_password(password, record["password_hash"]):
-            raise auth.AuthError("Invalid email or password.")
-        token = auth.generate_session_token()
-        self.sessions_by_hash[auth.hash_session_token(token)] = record["user"]
-        return auth.AuthSession(user=record["user"], token=token, expires_at=datetime.now(timezone.utc))
-
-    def create_session(self, *, user_id: str, user_agent: str = "", ip_address: str = ""):
-        for record in self.users_by_email.values():
-            if record["user"].id == user_id:
-                token = auth.generate_session_token()
-                self.sessions_by_hash[auth.hash_session_token(token)] = record["user"]
-                return auth.AuthSession(user=record["user"], token=token, expires_at=datetime.now(timezone.utc))
-        raise auth.AuthError("User account is not active.")
-
-    def get_user_for_session(self, token: str):
-        token_hash = auth.hash_session_token(token)
-        if token_hash in self.revoked_hashes:
-            return None
-        return self.sessions_by_hash.get(token_hash)
-
-    def revoke_session(self, token: str) -> None:
-        self.revoked_hashes.add(auth.hash_session_token(token))
-
-
-def authenticated_client() -> TestClient:
-    backend = InMemoryAuthBackend()
-    backend.create_user(email="ada@example.com", password="super-secure-passphrase", full_name="Ada Agent")
-    client = TestClient(create_app(auth_backend=backend))
-    response = client.post(
-        "/login",
-        data={"email": "ada@example.com", "password": "super-secure-passphrase"},
-        follow_redirects=False,
-    )
-    assert response.status_code == 303
-    return client
 
 
 @pytest.fixture(autouse=True)
@@ -157,27 +95,21 @@ def test_homepage_uses_stitch_inspired_production_sections():
     assert "for demos" not in response.text.lower()
 
 
-def test_session_auth_protects_setup_and_client_routes(monkeypatch):
+def test_dashboard_token_protects_setup_and_client_routes(monkeypatch):
     monkeypatch.setenv("GROOT_OPS_DASHBOARD_TOKEN", "pilot-secret")
-    client = TestClient(create_app(auth_backend=InMemoryAuthBackend()))
+    client = TestClient(create_app())
 
     assert client.get("/health").status_code == 200
     assert client.get("/").status_code == 200
-    blocked_setup = client.get("/setup", follow_redirects=False)
-    assert blocked_setup.status_code == 303
-    assert blocked_setup.headers["location"] == "/login?next=%2Fsetup"
-    blocked_dashboard = client.get("/clients/example/dashboard", follow_redirects=False)
-    assert blocked_dashboard.status_code == 303
-    assert blocked_dashboard.headers["location"] == "/login?next=%2Fclients%2Fexample%2Fdashboard"
+    blocked_setup = client.get("/setup")
+    assert blocked_setup.status_code == 401
+    assert "Dashboard access required" in blocked_setup.text
+    assert client.get("/clients/example/dashboard").status_code == 401
 
-    token_attempt = client.get("/setup?token=pilot-secret", follow_redirects=False)
-    assert token_attempt.status_code == 303
-    assert token_attempt.headers["location"].startswith("/login?next=")
-    assert "groot_ops_dashboard_token" not in token_attempt.headers.get("set-cookie", "")
-
-    authed = authenticated_client()
-    allowed_setup = authed.get("/setup")
+    allowed_setup = client.get("/setup?token=pilot-secret")
     assert allowed_setup.status_code == 200
+    assert "groot_ops_dashboard_token" in allowed_setup.headers.get("set-cookie", "")
+    assert client.get("/setup").status_code == 200
 
 
 def test_setup_sends_friendly_email_with_private_dashboard_link(monkeypatch, tmp_path):
@@ -191,10 +123,10 @@ def test_setup_sends_friendly_email_with_private_dashboard_link(monkeypatch, tmp
     monkeypatch.setenv("GROOT_OPS_PUBLIC_BASE_URL", "https://groot-ops.vercel.app")
     monkeypatch.setenv("GROOT_OPS_DEMO_CONFIG_DIR", str(tmp_path))
     monkeypatch.setattr("groot_ops.ui_app.send_setup_confirmation_email", fake_send_setup_confirmation_email)
-    client = authenticated_client()
+    client = TestClient(create_app())
 
     response = client.post(
-        "/setup",
+        "/setup?token=pilot-secret",
         data={
             "business_name": "Sunrise Realty Pilot",
             "agent_name": "Ava Realtor",
@@ -221,11 +153,11 @@ def test_setup_sends_friendly_email_with_private_dashboard_link(monkeypatch, tmp
     assert "Confirmation email sent" in response.text
     assert len(sent) == 1
     assert sent[0]["config"].business_name == "Sunrise Realty Pilot"
-    assert sent[0]["dashboard_url"] == "https://groot-ops.vercel.app/clients/sunrise_realty_pilot_ava_realtor/dashboard"
+    assert sent[0]["dashboard_url"] == "https://groot-ops.vercel.app/clients/sunrise_realty_pilot_ava_realtor/dashboard?token=pilot-secret"
 
 
 def test_setup_page_uses_client_friendly_controls_and_explanations():
-    client = authenticated_client()
+    client = TestClient(create_app())
 
     response = client.get("/setup")
 
@@ -270,7 +202,7 @@ def test_setup_page_uses_client_friendly_controls_and_explanations():
 def test_setup_edit_link_prefills_saved_client_values(monkeypatch, tmp_path):
     monkeypatch.setenv("GROOT_OPS_DEMO_CONFIG_DIR", str(tmp_path))
     monkeypatch.delenv("MATON_API_KEY", raising=False)
-    client = authenticated_client()
+    client = TestClient(create_app())
     client.post(
         "/setup",
         data={
@@ -336,14 +268,14 @@ def test_setup_edit_link_prefills_saved_client_values(monkeypatch, tmp_path):
 def test_setup_saves_demo_config_and_shows_dashboard_link(monkeypatch, tmp_path):
     monkeypatch.setenv("GROOT_OPS_DEMO_CONFIG_DIR", str(tmp_path))
     monkeypatch.delenv("MATON_API_KEY", raising=False)
-    client = authenticated_client()
+    client = TestClient(create_app())
 
     response = client.post(
         "/setup",
         data={
             "business_name": "Evergreen Realty",
             "agent_name": "Ada Agent",
-            "agent_phone": "+155****0100",
+            "agent_phone": "+15550100",
             "agent_email": "ada@example.com",
             "timezone": "America/New_York",
             "spreadsheet_url": "https://docs.google.com/spreadsheets/d/sheet123/edit",
@@ -375,7 +307,7 @@ def test_setup_saves_demo_config_and_shows_dashboard_link(monkeypatch, tmp_path)
 def test_dashboard_uses_stitch_inspired_supported_sections(monkeypatch, tmp_path):
     monkeypatch.setenv("GROOT_OPS_DEMO_CONFIG_DIR", str(tmp_path))
     monkeypatch.delenv("MATON_API_KEY", raising=False)
-    client = authenticated_client()
+    client = TestClient(create_app())
     client.post(
         "/setup",
         data={
@@ -422,8 +354,7 @@ def test_dashboard_uses_stitch_inspired_supported_sections(monkeypatch, tmp_path
     assert "Start setup is not the activation button" in dashboard.text
     assert "Edit setup" in dashboard.text
     assert 'class="nav-cta" href="/setup">Start setup' not in dashboard.text
-    assert 'class="nav-logout-form" method="post" action="/logout"' in dashboard.text
-    assert "Ada Agent" in dashboard.text
+    assert 'class="nav-cta" href="/clients/confort_properties_alex_john/dashboard">Open dashboard' in dashboard.text
     assert "Authentication" not in dashboard.text
     assert "Login" not in dashboard.text
 
@@ -431,7 +362,7 @@ def test_dashboard_uses_stitch_inspired_supported_sections(monkeypatch, tmp_path
 def test_dashboard_marks_mobile_wrapping_targets(monkeypatch, tmp_path):
     monkeypatch.setenv("GROOT_OPS_DEMO_CONFIG_DIR", str(tmp_path))
     monkeypatch.delenv("MATON_API_KEY", raising=False)
-    client = authenticated_client()
+    client = TestClient(create_app())
     client.post(
         "/setup",
         data={
@@ -470,7 +401,7 @@ def test_dashboard_marks_mobile_wrapping_targets(monkeypatch, tmp_path):
 
 def test_dashboard_shortcut_opens_latest_client_without_auth(monkeypatch, tmp_path):
     monkeypatch.setenv("GROOT_OPS_DEMO_CONFIG_DIR", str(tmp_path))
-    client = authenticated_client()
+    client = TestClient(create_app())
     client.post(
         "/setup",
         data={
@@ -503,7 +434,7 @@ def test_dashboard_shortcut_opens_latest_client_without_auth(monkeypatch, tmp_pa
 
 def test_dashboard_start_automation_button_sets_active_status(monkeypatch, tmp_path):
     monkeypatch.setenv("GROOT_OPS_DEMO_CONFIG_DIR", str(tmp_path))
-    client = authenticated_client()
+    client = TestClient(create_app())
     client.post(
         "/setup",
         data={
