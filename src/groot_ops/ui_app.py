@@ -149,7 +149,10 @@ def create_app() -> FastAPI:
             content={
                 "status": "ready" if database.ok else "not_ready",
                 "service": "groot-ops-ui",
-                "database": database.as_dict(),
+                "database": {
+                    "ok": database.ok,
+                    "status": database.status,
+                },
             },
         )
 

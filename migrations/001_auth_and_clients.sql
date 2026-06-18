@@ -102,19 +102,19 @@ CREATE TABLE IF NOT EXISTS client_configs (
     activity_log_sheet_name text NOT NULL DEFAULT 'Activity Log',
     column_mapping jsonb NOT NULL DEFAULT '{}'::jsonb,
     owner_notification_enabled boolean NOT NULL DEFAULT true,
-    owner_notification_channel text NOT NULL DEFAULT 'email',
+    owner_notification_channel text NOT NULL DEFAULT 'telegram',
     owner_notification_destination text,
     daily_summary_time text NOT NULL DEFAULT '08:30',
-    process_leads_frequency text NOT NULL DEFAULT 'manual',
-    automation_status text NOT NULL DEFAULT 'draft',
-    required_disclaimer text NOT NULL DEFAULT '',
+    process_leads_frequency text NOT NULL DEFAULT 'every_2h_weekdays',
+    automation_status text NOT NULL DEFAULT 'demo_manual',
+    required_disclaimer text NOT NULL DEFAULT 'Reply STOP to opt out.',
     max_draft_chars integer NOT NULL DEFAULT 700,
     scoring_settings jsonb NOT NULL DEFAULT '{}'::jsonb,
-    voice text NOT NULL DEFAULT 'friendly',
+    voice text NOT NULL DEFAULT 'friendly, concise, professional',
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT client_configs_channel_check CHECK (owner_notification_channel IN ('email', 'telegram', 'none')),
-    CONSTRAINT client_configs_automation_status_check CHECK (automation_status IN ('draft', 'active', 'paused'))
+    CONSTRAINT client_configs_automation_status_check CHECK (automation_status IN ('demo_manual', 'draft', 'active', 'paused'))
 );
 
 CREATE TABLE IF NOT EXISTS automation_runs (

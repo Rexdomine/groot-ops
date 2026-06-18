@@ -131,7 +131,7 @@ Done:
 - added `/ready` endpoint that checks DB connectivity without exposing credentials;
 - updated `.env.example` with safe placeholder `DATABASE_URL` and `NEON_API_KEY` fields;
 - verified live Neon schema and `/ready` response;
-- ran full tests and production readiness check: `65 passed, 1 warning`; readiness passed.
+- ran full tests and production readiness check: `69 passed, 1 warning`; readiness passed.
 
 ### Phase 2 — Custom authentication core
 
@@ -290,7 +290,7 @@ No customer-facing sending is implemented or allowed in Stable PoC. Future outbo
 - exact approved draft text unchanged;
 - separate explicit design/review phase.
 
-## Last verification before Stable PoC planning
+## Last verification before Stable PoC planning (historical pre-Phase 1 state)
 
 Commands run:
 

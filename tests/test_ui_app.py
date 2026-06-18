@@ -45,8 +45,6 @@ def test_ready_route_reports_db_readiness(monkeypatch):
         "database": {
             "ok": True,
             "status": "ok",
-            "database": "example.com/neondb",
-            "message": None,
         },
     }
 
@@ -72,8 +70,14 @@ def test_ready_route_returns_503_when_db_not_ready(monkeypatch):
     response = client.get("/ready")
 
     assert response.status_code == 503
-    assert response.json()["status"] == "not_ready"
-    assert response.json()["database"]["status"] == "missing_database_url"
+    assert response.json() == {
+        "status": "not_ready",
+        "service": "groot-ops-ui",
+        "database": {
+            "ok": False,
+            "status": "missing_database_url",
+        },
+    }
 
 
 def test_homepage_uses_stitch_inspired_production_sections():
