@@ -132,8 +132,9 @@ Done:
 - updated `.env.example` with safe placeholder `DATABASE_URL` and `NEON_API_KEY` fields;
 - configured Vercel/Vasio project env for Phase 1 DB runtime: `DATABASE_URL` exists for Production, Development, and the Phase 1 Preview branch; `GROOT_OPS_DB_CONNECT_TIMEOUT=5` exists for Production and Development while Preview uses the app default until Vercel branch-env targeting accepts the slash branch;
 - verified live Neon schema and local `/ready` response;
-- hosted Vercel Preview currently reaches the app but returns `database.status=connection_failed`; DB URLs pulled from Vercel connect successfully from the VPS, so the remaining blocker is Vercel runtime DB connectivity/driver diagnosis, not missing code or absent `DATABASE_URL`;
-- added safe server-side DB readiness logging so Vercel logs reveal the exception class without exposing credentials;
+- hosted Vercel Preview reached the app but returned `database.status=connection_failed`; root cause was `uv.lock` missing `psycopg`, so Vercel installed from a stale lock without the DB driver even though `requirements.txt` and `pyproject.toml` were updated;
+- updated `uv.lock` to include `psycopg`/`psycopg-binary` so Vercel installs the Phase 1 DB runtime dependency;
+- added safe server-side DB readiness logging so future Vercel logs reveal the exception class without exposing credentials;
 - ran full tests and production readiness check: `69 passed, 1 warning`; readiness passed.
 
 ### Phase 2 — Custom authentication core
