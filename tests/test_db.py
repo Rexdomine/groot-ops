@@ -85,13 +85,16 @@ def test_check_database_ready_uses_connection_factory(monkeypatch):
     assert calls == ["postgresql://user:pass@example.com/neondb?sslmode=require"]
 
 
-def test_check_database_ready_redacts_connection_errors(monkeypatch):
+def test_check_database_ready_redacts_connection_errors(monkeypatch, caplog):
+    import logging
+
     from groot_ops.db import check_database_ready
 
     def fake_connect(url):
         raise RuntimeError(f"could not connect to {url}")
 
-    monkeypatch.setenv("DATABASE_URL", "postgresql://user:***@example.com/neondb")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://user:secret@example.com/neondb")
+    caplog.set_level(logging.WARNING)
 
     readiness = check_database_ready(connect=fake_connect)
 
@@ -100,6 +103,11 @@ def test_check_database_ready_redacts_connection_errors(monkeypatch):
     assert "secret" not in (readiness.message or "")
     assert "user" not in (readiness.message or "")
     assert "example.com/neondb" in (readiness.message or "")
+    log_text = caplog.text
+    assert "RuntimeError" in log_text
+    assert "example.com/neondb" in log_text
+    assert "secret" not in log_text
+    assert "user" not in log_text
 
 
 def test_connect_database_uses_configurable_timeout(monkeypatch):

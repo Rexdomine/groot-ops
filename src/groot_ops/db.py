@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import asdict, dataclass
 from typing import Any, Callable
 from urllib.parse import urlparse
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -83,6 +86,11 @@ def check_database_ready(
             )
         return DatabaseReadiness(ok=True, status="ok", database=label)
     except Exception as exc:
+        logger.warning(
+            "database readiness check failed for %s: %s",
+            label or "unconfigured-database",
+            exc.__class__.__name__,
+        )
         return DatabaseReadiness(
             ok=False,
             status="connection_failed",
