@@ -73,6 +73,8 @@ def authenticated_client() -> TestClient:
 def clear_dashboard_token(monkeypatch):
     monkeypatch.delenv("GROOT_OPS_DASHBOARD_TOKEN", raising=False)
     monkeypatch.delenv("GROOT_OPS_SESSION_COOKIE_SECURE", raising=False)
+    monkeypatch.delenv("GROOT_OPS_PUBLIC_BASE_URL", raising=False)
+    monkeypatch.delenv("VERCEL", raising=False)
 
 
 def test_health_route():

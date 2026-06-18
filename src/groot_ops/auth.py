@@ -81,7 +81,12 @@ def hash_session_token(token: str) -> str:
 
 
 def _ip_hash_secret() -> str:
-    return os.getenv("GROOT_OPS_IP_HASH_SECRET") or os.getenv("GROOT_OPS_SESSION_SECRET") or "local-development-only"
+    secret = os.getenv("GROOT_OPS_IP_HASH_SECRET") or os.getenv("GROOT_OPS_SESSION_SECRET")
+    if not secret:
+        raise RuntimeError(
+            "Set GROOT_OPS_IP_HASH_SECRET or GROOT_OPS_SESSION_SECRET before hashing IP addresses."
+        )
+    return secret
 
 
 def hash_ip_address(ip_address: str) -> str:
@@ -89,6 +94,11 @@ def hash_ip_address(ip_address: str) -> str:
     if not cleaned:
         return ""
     return hmac.new(_ip_hash_secret().encode("utf-8"), cleaned.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def _login_rate_limit_lock_key(scope: str, value: str) -> int:
+    digest = hashlib.sha256(f"login-rate-limit:{scope}:{value}".encode("utf-8")).digest()
+    return int.from_bytes(digest[:8], "big", signed=True)
 
 
 def _user_from_row(row: Any) -> AuthUser:
@@ -139,6 +149,9 @@ class DatabaseAuthBackend:
         try:
             with self._connect() as conn:
                 with conn.cursor() as cur:
+                    self._lock_login_rate_limit_bucket(
+                        cur, email_normalized=email_normalized, ip_hash=ip_hash
+                    )
                     self._raise_if_login_rate_limited(cur, email_normalized=email_normalized, ip_hash=ip_hash)
                     cur.execute(
                         """
@@ -185,6 +198,15 @@ class DatabaseAuthBackend:
             return AuthSession(user=user, token=token, expires_at=expires_at)
         except AuthError:
             raise
+
+    def _lock_login_rate_limit_bucket(self, cur: Any, *, email_normalized: str, ip_hash: str) -> None:
+        lock_keys = set()
+        if email_normalized:
+            lock_keys.add(_login_rate_limit_lock_key("email", email_normalized))
+        if ip_hash:
+            lock_keys.add(_login_rate_limit_lock_key("ip", ip_hash))
+        for lock_key in sorted(lock_keys):
+            cur.execute("SELECT pg_advisory_xact_lock(%s)", (lock_key,))
 
     def _raise_if_login_rate_limited(self, cur: Any, *, email_normalized: str, ip_hash: str) -> None:
         cur.execute(
