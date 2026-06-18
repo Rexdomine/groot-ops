@@ -80,7 +80,11 @@ def apply_pending_migrations(
     conn: Any, *, migration_dir: Path = DEFAULT_MIGRATION_DIR, dry_run: bool = False
 ) -> list[str]:
     cur = conn.cursor()
-    pending = pending_migration_paths(conn, migration_dir=migration_dir)
+    pending = pending_migration_paths(
+        conn,
+        migration_dir=migration_dir,
+        ensure_schema_table=not dry_run,
+    )
 
     applied_now: list[str] = []
     for migration in pending:
