@@ -47,7 +47,7 @@ def test_build_owner_summary_email_contains_actionable_digest():
     assert "Review pending drafts" in email.text_body
 
 
-def test_build_owner_setup_confirmation_email_is_branded_and_includes_private_dashboard_link():
+def test_build_owner_setup_confirmation_email_is_branded_and_includes_dashboard_link():
     config = load_client_config("configs/sample_realtor.yaml")
     config.business_name = "Sunrise Realty Pilot"
     config.agent_name = "Ava Realtor"
@@ -59,25 +59,44 @@ def test_build_owner_setup_confirmation_email_is_branded_and_includes_private_da
     email = build_owner_setup_confirmation_email(
         config,
         recipient="ava@example.com",
-        dashboard_url="https://groot-ops.vercel.app/clients/sunrise/dashboard?token=private-token",
+        dashboard_url="https://groot-ops.vercel.app/clients/sunrise/dashboard",
     )
 
     assert email.to_email == "ava@example.com"
     assert "Groot Ops setup is ready" in email.subject
     assert "Sunrise Realty Pilot" in email.subject
-    assert "Your private dashboard" in email.text_body
-    assert "https://groot-ops.vercel.app/clients/sunrise/dashboard?token=private-token" in email.text_body
+    assert "Your dashboard" in email.text_body
+    assert "https://groot-ops.vercel.app/clients/sunrise/dashboard" in email.text_body
+    assert "token=" not in email.text_body
+    assert "token=" not in email.html_body
     assert "Copy the link above" not in email.text_body
     assert "Groot Ops command center" in email.html_body
     assert "Your setup is ready" in email.html_body
-    assert "Open private dashboard" in email.html_body
+    assert "Open dashboard" in email.html_body
     assert "Every 2h Weekdays" in email.html_body
     assert "No customer messages are sent automatically" in email.html_body
     assert "Keep this email" in email.html_body
 
 
+def test_setup_confirmation_default_dashboard_url_ignores_legacy_token(monkeypatch):
+    monkeypatch.setenv("GROOT_OPS_PUBLIC_BASE_URL", "https://demo.grootops.ai")
+    monkeypatch.setenv("GROOT_OPS_DASHBOARD_TOKEN", "legacy-secret-must-not-leak")
+    config = load_client_config("configs/sample_realtor.yaml")
+    config.client_id = "sample_realtor"
+
+    email = build_owner_setup_confirmation_email(config, recipient="owner@example.com")
+
+    assert "https://demo.grootops.ai/clients/sample_realtor/dashboard" in email.text_body
+    assert "https://demo.grootops.ai/clients/sample_realtor/dashboard" in email.html_body
+    assert "token=" not in email.text_body
+    assert "token=" not in email.html_body
+    assert "legacy-secret-must-not-leak" not in email.text_body
+    assert "legacy-secret-must-not-leak" not in email.html_body
+
+
 def test_owner_summary_email_uses_branded_actionable_template(monkeypatch):
     monkeypatch.setenv("GROOT_OPS_PUBLIC_BASE_URL", "https://demo.grootops.ai")
+    monkeypatch.setenv("GROOT_OPS_DASHBOARD_TOKEN", "legacy-secret-must-not-leak")
     config = load_client_config("configs/sample_realtor.yaml")
     config.client_id = "sample_realtor"
     summary = DailySummary(
@@ -95,6 +114,11 @@ def test_owner_summary_email_uses_branded_actionable_template(monkeypatch):
     assert "Groot Ops command center" in email.html_body
     assert "Open dashboard" in email.html_body
     assert "https://demo.grootops.ai/clients/sample_realtor/dashboard" in email.html_body
+    assert "https://demo.grootops.ai/clients/sample_realtor/dashboard" in email.text_body
+    assert "token=" not in email.text_body
+    assert "token=" not in email.html_body
+    assert "legacy-secret-must-not-leak" not in email.text_body
+    assert "legacy-secret-must-not-leak" not in email.html_body
     assert "Call now" in email.html_body
     assert "tel:+15550101" in email.html_body
     assert "Email lead" in email.html_body

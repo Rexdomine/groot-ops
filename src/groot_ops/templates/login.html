@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Login — Groot Ops{% endblock %}
+{% block content %}
+<section class="auth-shell mesh-bg">
+  <article class="auth-card panel">
+    <p class="eyebrow">Secure workspace access</p>
+    <h1>Login to Groot Ops</h1>
+    <p class="lede">Open your private lead follow-up workspace with your email and password.</p>
+
+    {% if logged_out %}
+      <div class="auth-notice success" role="status">You have been logged out safely.</div>
+    {% endif %}
+    {% if errors %}
+      <div class="auth-notice error" role="alert">
+        {% for error in errors %}<p>{{ error }}</p>{% endfor %}
+      </div>
+    {% endif %}
+
+    <form class="auth-form" method="post" action="/login?next={{ next_path | urlencode }}">
+      <label>Email
+        <input type="email" name="email" value="{{ values.email or '' }}" autocomplete="email" required>
+      </label>
+      <label>Password
+        <input type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <button class="button primary large" type="submit">Login</button>
+    </form>
+    <p class="auth-switch">New to Groot Ops? <a href="/signup">Create your account</a>.</p>
+  </article>
+</section>
+{% endblock %}
