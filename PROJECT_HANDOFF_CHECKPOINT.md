@@ -140,11 +140,37 @@ Done:
 
 ### Phase 2 — Custom authentication core
 
-Status: **ready to start**
+Status: **in progress on `feat/phase2-custom-auth`**
 
-Goal:
+Done locally:
 
-- signup, login, logout, secure session cookie handling, session middleware, and replacing the token wall on normal user routes.
+- added `src/groot_ops/auth.py` with PBKDF2 password hashing, opaque random session tokens, SHA-256 session-token storage, login-attempt recording, and Neon-backed user/session operations;
+- added `/signup`, `/login`, and `/logout` routes with HttpOnly SameSite=Lax session cookies;
+- replaced the old dashboard token wall for `/setup`, `/dashboard`, and `/clients/*` with session middleware and login redirects that preserve `next`;
+- updated home/header CTA behavior for anonymous vs authenticated users;
+- added login/signup templates and styles;
+- updated tests so old `/setup?token=...` links no longer grant access;
+- verified local test suite: `77 passed, 1 warning`;
+- verified production readiness check and migration dry-run;
+- verified live Neon auth smoke using a throwaway user/session and cleaned it up.
+
+Hosted verification completed:
+
+- Phase 2 PR: https://github.com/Rexdomine/groot-ops/pull/16
+- Vercel Preview: `https://groot-dn6hfx5f0-rexdomines-projects.vercel.app`
+- `/ready` returned `status=ready` and `database.status=ok`.
+- Anonymous `/setup` redirects to `/login?next=%2Fsetup`.
+- Hosted `/signup` creates a secure HttpOnly session and redirects to `/setup`.
+- Authenticated `/setup` renders `Setup Health`, the logged-in user, and logout control.
+- Hosted `/logout` revokes the session and redirects to `/login?logged_out=1`.
+- The same session is blocked from `/setup` after logout.
+- Hosted QA used Vercel's official automation protection bypass header for Preview testing; the bypass secret is not committed or logged.
+- Throwaway hosted test user/session was cleaned from Neon after verification.
+
+Remaining before completion:
+
+- run NightWing QA;
+- report PR checks/preview status.
 
 ### Phase 3 — Account recovery and verification
 
@@ -201,47 +227,45 @@ The system already can:
 - deploy to Vercel through `api/index.py` and `vercel.json`;
 - send owner-facing setup and summary emails through Maton Gmail when configured.
 
-Existing current problem to fix:
+Existing current problem addressed by Phase 2:
 
-- normal `Start Setup` / `View Dashboard` flow hits the dashboard-token access wall.
-- early users need normal signup/login and persistent dashboards instead.
+- normal `Start Setup` / `View Dashboard` flow no longer uses the dashboard-token access wall;
+- early users can use normal signup/login and server-side sessions;
+- persistent user-owned dashboards are still Phase 4.
 
 ## Current branch/state at latest inspection
 
 Current local branch when checkpointed:
 
-- `fix/setup-edit-prefill`
+- `feat/phase2-custom-auth`
 
 Remote tracking branch:
 
-- `origin/fix/setup-edit-prefill`
+- not pushed yet at this checkpoint
 
-Current branch contains three commits beyond `origin/main`:
+Current branch contains Phase 2 auth work beyond `origin/main`:
 
-- `f7e5b11 fix: prefill setup form when editing client`
-- `1d0d2a9 fix: harden dashboard mobile layout`
-- `b176528 fix: prevent test email bounce sends`
+- app-owned signup/login/logout/session auth;
+- removed token wall from normal user routes;
+- tests/docs/env-template updates.
 
-Untracked local demo config at checkpoint time:
-
-- `configs/demo_clients/rex_realty_pilot_mobile_dashboard_qa_princewill.yaml`
-
-Before implementation, decide whether this config should be kept local, deleted, gitignored, or sanitized as an example.
+Untracked local demo configs should remain local/ignored and must not enter PRs.
 
 ## Production/deployment notes
 
 Local `.env` contains required deployment/runtime secrets, but secrets must not be printed or committed.
 
-Known local env keys present when checked:
+Known local/deployment env keys used when checked:
 
 - `VERCEL_TOKEN`
 - `MATON_API_KEY`
-- `GROOT_OPS_DASHBOARD_TOKEN`
-
-Future PoC will also need:
-
 - `DATABASE_URL`
-- app/session secret if implemented separately
+- `DATABASE_URL_UNPOOLED`
+- `GROOT_OPS_DB_CONNECT_TIMEOUT`
+
+Legacy note:
+
+- `GROOT_OPS_DASHBOARD_TOKEN` may still exist in old local/Vercel environments, but Phase 2 does not use it for normal user routes or owner email links.
 
 Use the Rex-specific deployment route:
 

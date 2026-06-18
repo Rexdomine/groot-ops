@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import logging
 import os
+import re
 import urllib.parse
 from contextlib import redirect_stdout
 from io import StringIO
@@ -12,6 +14,13 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from .auth import (
+    SESSION_COOKIE_NAME,
+    SESSION_DAYS,
+    AuthError,
+    AuthUser,
+    DatabaseAuthBackend,
+)
 from .config_loader import load_client_config
 from .db import check_database_ready
 from .main_daily_summary import run_daily_summary
@@ -30,41 +39,72 @@ from .ui_config_service import (
 )
 
 PACKAGE_DIR = Path(__file__).resolve().parent
+logger = logging.getLogger(__name__)
 
 
 PROTECTED_UI_PREFIXES = ("/setup", "/dashboard", "/clients/")
-
-
-def _dashboard_token() -> str:
-    return os.getenv("GROOT_OPS_DASHBOARD_TOKEN", "").strip()
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 def _is_protected_ui_path(path: str) -> bool:
     return path in {"/setup", "/dashboard"} or path.startswith(PROTECTED_UI_PREFIXES)
 
 
-def _request_has_valid_dashboard_token(request: Request, expected_token: str) -> bool:
-    supplied_token = (
-        request.query_params.get("token")
-        or request.headers.get("X-Groot-Ops-Dashboard-Token")
-        or request.cookies.get("groot_ops_dashboard_token")
-        or ""
-    ).strip()
-    return bool(supplied_token and supplied_token == expected_token)
+def _is_auth_path(path: str) -> bool:
+    return path in {"/login", "/signup", "/logout"}
 
 
-def _unauthorized_dashboard_response() -> HTMLResponse:
-    return HTMLResponse(
-        """
-        <!doctype html>
-        <title>Groot Ops dashboard access required</title>
-        <main style="font-family: system-ui, sans-serif; max-width: 640px; margin: 10vh auto; padding: 2rem;">
-          <h1>Dashboard access required</h1>
-          <p>This pilot dashboard is protected. Open the private dashboard link that includes the access token, or ask Groot Ops support for a fresh link.</p>
-        </main>
-        """,
-        status_code=401,
+def _safe_next_path(next_path: str | None) -> str:
+    candidate = (next_path or "/setup").strip() or "/setup"
+    if not candidate.startswith("/") or candidate.startswith("//"):
+        return "/setup"
+    if candidate.startswith("/login") or candidate.startswith("/signup") or candidate.startswith("/logout"):
+        return "/setup"
+    return candidate
+
+
+def _login_redirect_for(request: Request) -> RedirectResponse:
+    next_path = request.url.path
+    if request.url.query:
+        next_path = f"{next_path}?{request.url.query}"
+    return RedirectResponse(url=f"/login?next={urllib.parse.quote(next_path, safe='')}", status_code=303)
+
+
+def _validate_signup_form(full_name: str, email: str, password: str) -> list[str]:
+    errors: list[str] = []
+    if len(full_name.strip()) < 2:
+        errors.append("Enter your full name.")
+    if not EMAIL_RE.match(email.strip()):
+        errors.append("Enter a valid email address.")
+    if len(password) < 12:
+        errors.append("Password must be at least 12 characters.")
+    return errors
+
+
+def _set_session_cookie(response: RedirectResponse, token: str, *, request: Request) -> None:
+    response.set_cookie(
+        SESSION_COOKIE_NAME,
+        token,
+        max_age=SESSION_DAYS * 24 * 60 * 60,
+        httponly=True,
+        secure=request.url.scheme == "https",
+        samesite="lax",
     )
+
+
+def _clear_session_cookie(response: RedirectResponse, *, request: Request) -> None:
+    response.delete_cookie(
+        SESSION_COOKIE_NAME,
+        httponly=True,
+        secure=request.url.scheme == "https",
+        samesite="lax",
+    )
+
+
+def _template_context(request: Request, **values: Any) -> dict[str, Any]:
+    context = {"current_user": getattr(request.state, "current_user", None)}
+    context.update(values)
+    return context
 
 
 def _public_base_url(request: Request) -> str:
@@ -74,11 +114,7 @@ def _public_base_url(request: Request) -> str:
 
 def _private_dashboard_url(request: Request, client_id: str) -> str:
     quoted_client_id = urllib.parse.quote(client_id)
-    url = f"{_public_base_url(request)}/clients/{quoted_client_id}/dashboard"
-    dashboard_token = _dashboard_token()
-    if dashboard_token:
-        url = f"{url}?token={urllib.parse.quote(dashboard_token)}"
-    return url
+    return f"{_public_base_url(request)}/clients/{quoted_client_id}/dashboard"
 
 
 def _setup_values_from_config(config: ClientConfig) -> dict[str, str]:
@@ -113,27 +149,23 @@ def _setup_values_from_config(config: ClientConfig) -> dict[str, str]:
     }
 
 
-def create_app() -> FastAPI:
+def create_app(*, auth_backend: Any | None = None) -> FastAPI:
     app = FastAPI(title="Groot Ops Demo UI", version="0.1.0")
     app.mount("/static", StaticFiles(directory=PACKAGE_DIR / "static"), name="static")
     templates = Jinja2Templates(directory=str(PACKAGE_DIR / "templates"))
+    auth_backend = auth_backend or DatabaseAuthBackend()
 
     @app.middleware("http")
-    async def protect_dashboard_routes(request: Request, call_next: Any) -> Any:
-        expected_token = _dashboard_token()
-        if expected_token and _is_protected_ui_path(request.url.path):
-            if not _request_has_valid_dashboard_token(request, expected_token):
-                return _unauthorized_dashboard_response()
-            response = await call_next(request)
-            if request.query_params.get("token") == expected_token:
-                response.set_cookie(
-                    "groot_ops_dashboard_token",
-                    expected_token,
-                    httponly=True,
-                    secure=request.url.scheme == "https",
-                    samesite="lax",
-                )
-            return response
+    async def attach_user_and_protect_routes(request: Request, call_next: Any) -> Any:
+        request.state.current_user = None
+        session_token = request.cookies.get(SESSION_COOKIE_NAME, "")
+        if session_token:
+            try:
+                request.state.current_user = auth_backend.get_user_for_session(session_token)
+            except Exception:
+                request.state.current_user = None
+        if _is_protected_ui_path(request.url.path) and request.state.current_user is None:
+            return _login_redirect_for(request)
         return await call_next(request)
 
     @app.get("/health")
@@ -159,7 +191,130 @@ def create_app() -> FastAPI:
     @app.get("/", response_class=HTMLResponse)
     def home(request: Request) -> Any:
         configs = list_demo_configs()
-        return templates.TemplateResponse(request, "home.html", {"configs": configs})
+        return templates.TemplateResponse(request, "home.html", _template_context(request, configs=configs))
+
+    @app.get("/signup", response_class=HTMLResponse)
+    def signup_form(request: Request) -> Any:
+        return templates.TemplateResponse(
+            request,
+            "signup.html",
+            _template_context(request, errors=[], values={}, configs=list_demo_configs()),
+        )
+
+    @app.post("/signup", response_class=HTMLResponse)
+    def signup_submit(
+        request: Request,
+        full_name: str = Form(""),
+        email: str = Form(""),
+        password: str = Form(""),
+    ) -> Any:
+        errors = _validate_signup_form(full_name, email, password)
+        values = {"full_name": full_name, "email": email}
+        if errors:
+            return templates.TemplateResponse(
+                request,
+                "signup.html",
+                _template_context(request, errors=errors, values=values, configs=list_demo_configs()),
+                status_code=400,
+            )
+        try:
+            user = auth_backend.create_user(email=email, password=password, full_name=full_name)
+            session = auth_backend.create_session(
+                user_id=user.id,
+                user_agent=request.headers.get("user-agent", ""),
+                ip_address=request.client.host if request.client else "",
+            )
+        except AttributeError:
+            # Test backends can create the session as part of authentication instead of exposing create_session.
+            session = auth_backend.authenticate_user(
+                email=email,
+                password=password,
+                user_agent=request.headers.get("user-agent", ""),
+                ip_address=request.client.host if request.client else "",
+            )
+        except AuthError as exc:
+            return templates.TemplateResponse(
+                request,
+                "signup.html",
+                _template_context(request, errors=[str(exc)], values=values, configs=list_demo_configs()),
+                status_code=400,
+            )
+        except Exception as exc:
+            logger.exception("signup session creation failed: %s", exc.__class__.__name__)
+            return templates.TemplateResponse(
+                request,
+                "signup.html",
+                _template_context(
+                    request,
+                    errors=["We could not create your account right now. Please try again."],
+                    values=values,
+                    configs=list_demo_configs(),
+                ),
+                status_code=500,
+            )
+        response = RedirectResponse(url="/setup", status_code=303)
+        _set_session_cookie(response, session.token, request=request)
+        return response
+
+    @app.get("/login", response_class=HTMLResponse)
+    def login_form(request: Request, next: str = "/setup", logged_out: str = "") -> Any:
+        return templates.TemplateResponse(
+            request,
+            "login.html",
+            _template_context(
+                request,
+                errors=[],
+                values={},
+                next_path=_safe_next_path(next),
+                logged_out=bool(logged_out),
+                configs=list_demo_configs(),
+            ),
+        )
+
+    @app.post("/login", response_class=HTMLResponse)
+    def login_submit(
+        request: Request,
+        email: str = Form(""),
+        password: str = Form(""),
+        next: str = "/setup",
+    ) -> Any:
+        next_path = _safe_next_path(next)
+        try:
+            session = auth_backend.authenticate_user(
+                email=email,
+                password=password,
+                user_agent=request.headers.get("user-agent", ""),
+                ip_address=request.client.host if request.client else "",
+            )
+        except AuthError as exc:
+            return templates.TemplateResponse(
+                request,
+                "login.html",
+                _template_context(
+                    request,
+                    errors=[str(exc)],
+                    values={"email": email},
+                    next_path=next_path,
+                    logged_out=False,
+                    configs=list_demo_configs(),
+                ),
+                status_code=401,
+            )
+        response = RedirectResponse(url=next_path, status_code=303)
+        _set_session_cookie(response, session.token, request=request)
+        return response
+
+    @app.post("/logout")
+    def logout(request: Request) -> RedirectResponse:
+        token = request.cookies.get(SESSION_COOKIE_NAME, "")
+        if token:
+            try:
+                auth_backend.revoke_session(token)
+            except Exception:
+                pass
+        response = RedirectResponse(url="/login?logged_out=1", status_code=303)
+        _clear_session_cookie(response, request=request)
+        return response
 
     @app.get("/setup", response_class=HTMLResponse)
     def setup(request: Request, client_id: str = "") -> Any:
@@ -174,7 +329,7 @@ def create_app() -> FastAPI:
         return templates.TemplateResponse(
             request,
             "setup.html",
-            {"values": values, "checks": [], "configs": configs, "editing": bool(editing_client_id)},
+            _template_context(request, values=values, checks=[], configs=configs, editing=bool(editing_client_id)),
         )
 
     @app.get("/dashboard")
@@ -202,16 +357,17 @@ def create_app() -> FastAPI:
         return templates.TemplateResponse(
             request,
             "setup.html",
-            {
-                "values": form,
-                "client_id": data["client_id"],
-                "config_path": str(config_path),
-                "dashboard_url": dashboard_url,
-                "email_status": email_status,
-                "checks": checks,
-                "saved": True,
-                "configs": list_demo_configs(),
-            },
+            _template_context(
+                request,
+                values=form,
+                client_id=data["client_id"],
+                config_path=str(config_path),
+                dashboard_url=dashboard_url,
+                email_status=email_status,
+                checks=checks,
+                saved=True,
+                configs=list_demo_configs(),
+            ),
         )
 
     @app.get("/clients/{client_id}/dashboard", response_class=HTMLResponse)
@@ -238,20 +394,21 @@ def create_app() -> FastAPI:
         return templates.TemplateResponse(
             request,
             "dashboard.html",
-            {
-                "config": config,
-                "config_path": str(config_path),
-                "checks": checks,
-                "leads": leads,
-                "lead_error": lead_error,
-                "cards": cards,
-                "summary": summary,
-                "preview": preview,
-                "ready_checks": ready_checks,
-                "total_checks": len(checks),
-                "dashboard_path": dashboard_path,
-                "configs": list_demo_configs(),
-            },
+            _template_context(
+                request,
+                config=config,
+                config_path=str(config_path),
+                checks=checks,
+                leads=leads,
+                lead_error=lead_error,
+                cards=cards,
+                summary=summary,
+                preview=preview,
+                ready_checks=ready_checks,
+                total_checks=len(checks),
+                dashboard_path=dashboard_path,
+                configs=list_demo_configs(),
+            ),
         )
 
     @app.post("/clients/{client_id}/preview-summary", response_class=HTMLResponse)
