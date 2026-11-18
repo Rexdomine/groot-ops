@@ -200,6 +200,19 @@ def create_app(*, auth_backend: Any | None = None) -> FastAPI:
         configs = list_demo_configs()
         return templates.TemplateResponse(request, "home.html", _template_context(request, configs=configs))
 
+    @app.get("/privacy", response_class=HTMLResponse)
+    def privacy(request: Request) -> Any:
+        return templates.TemplateResponse(
+            request,
+            "privacy.html",
+            _template_context(
+                request,
+                configs=[],
+                updated="18 November 2026",
+                contact_email=os.getenv("GROOT_OPS_PRIVACY_EMAIL", "grootopsai@gmail.com"),
+            ),
+        )
+
     @app.get("/signup", response_class=HTMLResponse)
     def signup_form(request: Request) -> Any:
         return templates.TemplateResponse(
