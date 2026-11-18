@@ -23,6 +23,9 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Callable
+from urllib.parse import parse_qsl, urlsplit
+
+from groot_ops.whatsapp_channel import WhatsAppChannel
 
 log = logging.getLogger("groot_ops.agent_bridge")
 
@@ -218,9 +221,16 @@ class LeadBridge:
         return {"reply": clean_reply, "status": "ok", "lead": summary, "notified_ops": sent}
 
 
-def make_handler(bridge: LeadBridge, token: str):
+WHATSAPP_PATH = "/whatsapp/webhook"
+
+
+def make_handler(bridge: LeadBridge, token: str, whatsapp: WhatsAppChannel | None = None):
     class Handler(BaseHTTPRequestHandler):
         def do_POST(self):  # noqa: N802 (http.server naming)
+            if whatsapp and urlsplit(self.path).path == WHATSAPP_PATH:
+                length = min(int(self.headers.get("Content-Length", "0") or 0), 256 * 1024)
+                status = whatsapp.receive(self.rfile.read(length), self.headers.get("X-Hub-Signature-256", ""))
+                return self._send(status, {"ok": status == 200})
             if self.path != "/inbound":
                 return self._send(404, {"error": "not found"})
             if self.headers.get("Authorization", "") != f"Bearer {token}":
@@ -235,7 +245,19 @@ def make_handler(bridge: LeadBridge, token: str):
             self._send(200, result)
 
         def do_GET(self):  # noqa: N802
+            url = urlsplit(self.path)
+            if whatsapp and url.path == WHATSAPP_PATH:
+                status, text = whatsapp.verify(dict(parse_qsl(url.query)))
+                return self._send_text(status, text)
             self._send(200 if self.path == "/health" else 404, {"ok": self.path == "/health"})
+
+        def _send_text(self, status: int, text: str):
+            data = text.encode()
+            self.send_response(status)
+            self.send_header("Content-Type", "text/plain")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
 
         def _send(self, status: int, body: dict):
             data = json.dumps(body).encode()
@@ -270,9 +292,14 @@ def main() -> None:
         AdaClient(ada_url, ada_file["key"]),
         OpsNotifier(ops_url),
     )
+    whatsapp = None
+    whatsapp_file = os.environ.get("BRIDGE_WHATSAPP_FILE")
+    if whatsapp_file:
+        whatsapp = WhatsAppChannel(config=lambda: _read_json(whatsapp_file), handle=bridge.handle, post=post_json)
+        log.info("WhatsApp channel on %s", WHATSAPP_PATH)
     host, port = os.environ.get("BRIDGE_HOST", "127.0.0.1"), int(os.environ.get("BRIDGE_PORT", "8810"))
     log.info("lead bridge listening on http://%s:%s", host, port)
-    ThreadingHTTPServer((host, port), make_handler(bridge, token)).serve_forever()
+    ThreadingHTTPServer((host, port), make_handler(bridge, token, whatsapp)).serve_forever()
 
 
 if __name__ == "__main__":
