@@ -544,3 +544,17 @@ def test_dashboard_start_automation_button_sets_active_status(monkeypatch, tmp_p
     assert "Ready to activate" not in response.text
     config_text = (tmp_path / "evergreen_realty_ada_agent.yaml").read_text()
     assert "automation_status: active" in config_text
+
+
+def test_privacy_policy_is_public_and_covers_meta_requirements():
+    client = TestClient(create_app())
+
+    response = client.get("/privacy")
+
+    assert response.status_code == 200
+    body = response.text
+    assert "Privacy Policy" in body
+    assert 'id="data-deletion"' in body
+    assert "WhatsApp" in body
+    assert "mailto:" in body
+    assert 'href="/privacy"' in body  # footer link
