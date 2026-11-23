@@ -43,6 +43,22 @@ def extract_messages(payload: dict, phone_number_id: str) -> Iterator[tuple[dict
                     yield message, names.get(message["from"], "")
 
 
+def describe_event(payload: dict, phone_number_id: str) -> str:
+    """One log line about an event's shape, never its content."""
+    parts = []
+    for entry in payload.get("entry") or []:
+        for change in entry.get("changes") or []:
+            value = change.get("value") or {}
+            pnid = str((value.get("metadata") or {}).get("phone_number_id", ""))
+            parts.append(
+                f"field={change.get('field')} ours={pnid == str(phone_number_id)} "
+                f"messages={[m.get('type') for m in value.get('messages') or []]} "
+                f"statuses={[(s.get('status'), [(e.get('code'), e.get('title')) for e in s.get('errors') or []]) for s in value.get('statuses') or []]} "
+                f"errors={[e.get('code') for e in value.get('errors') or []]}"
+            )
+    return f"object={payload.get('object')} " + ("; ".join(parts) or "no changes")
+
+
 def message_text(message: dict) -> str | None:
     kind = message.get("type")
     if kind == "text":
@@ -92,6 +108,7 @@ class WhatsAppChannel:
             payload = json.loads(raw)
         except json.JSONDecodeError:
             return 400
+        log.info("WhatsApp event: %s", describe_event(payload, cfg["phone_number_id"]))
         for message, profile in extract_messages(payload, cfg["phone_number_id"]):
             if self._first_time(message["id"]):
                 self._run(lambda m=message, p=profile: self._process(m, p))

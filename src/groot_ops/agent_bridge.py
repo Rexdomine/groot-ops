@@ -25,6 +25,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Callable
 from urllib.parse import parse_qsl, urlsplit
 
+from groot_ops.telegram_channel import OpsChat, TelegramChannel
 from groot_ops.whatsapp_channel import WhatsAppChannel
 
 log = logging.getLogger("groot_ops.agent_bridge")
@@ -297,6 +298,15 @@ def main() -> None:
     if whatsapp_file:
         whatsapp = WhatsAppChannel(config=lambda: _read_json(whatsapp_file), handle=bridge.handle, post=post_json)
         log.info("WhatsApp channel on %s", WHATSAPP_PATH)
+    telegram_file = os.environ.get("BRIDGE_TELEGRAM_FILE")
+    if telegram_file:
+        ops_chat = OpsChat(os.environ.get("BRIDGE_OPS_API", "http://127.0.0.1:8799"), os.environ["BRIDGE_OPS_BOT_ID"])
+        telegram = TelegramChannel(
+            config=lambda: _read_json(telegram_file),
+            state_path=os.environ.get("BRIDGE_TELEGRAM_STATE", "telegram-allowed.json"),
+            ops=ops_chat,
+        )
+        threading.Thread(target=telegram.serve_forever, name="telegram", daemon=True).start()
     host, port = os.environ.get("BRIDGE_HOST", "127.0.0.1"), int(os.environ.get("BRIDGE_PORT", "8810"))
     log.info("lead bridge listening on http://%s:%s", host, port)
     ThreadingHTTPServer((host, port), make_handler(bridge, token, whatsapp)).serve_forever()

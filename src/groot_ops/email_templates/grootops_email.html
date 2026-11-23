@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>{{SUBJECT}}</title>
+</head>
+<body style="margin:0;padding:0;background:#f6faff;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#f6faff;">{{PREHEADER}}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6faff;">
+<tr><td align="center" style="padding:28px 12px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;font-family:Inter,'Helvetica Neue',Arial,sans-serif;color:#141d23;">
+
+  <!-- Header -->
+  <tr><td style="background:#012d1d;border-radius:20px 20px 0 0;padding:22px 28px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td style="vertical-align:middle;">
+        <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+          <td style="width:34px;height:34px;background:#c1ecd4;border-radius:17px;text-align:center;vertical-align:middle;font-size:17px;font-weight:900;color:#012d1d;line-height:34px;">G</td>
+          <td style="padding-left:10px;font-size:20px;font-weight:900;letter-spacing:-0.5px;color:#ffffff;">GrootOps</td>
+        </tr></table>
+      </td>
+      <td align="right" style="vertical-align:middle;">
+        <span style="display:inline-block;background:#fdcb52;color:#5b4300;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:800;">{{LABEL}}</span>
+      </td>
+    </tr></table>
+  </td></tr>
+
+  <!-- Body -->
+  <tr><td style="background:#ffffff;padding:32px 28px 8px;border-left:1px solid #e6eff8;border-right:1px solid #e6eff8;">
+    <p style="margin:0 0 8px;font-size:12px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;color:#1b4332;">{{EYEBROW}}</p>
+    <h1 style="margin:0 0 14px;font-size:26px;line-height:1.2;font-weight:900;letter-spacing:-0.5px;color:#012d1d;">{{TITLE}}</h1>
+    <p style="margin:0 0 22px;font-size:16px;line-height:1.6;color:#414844;">{{INTRO}}</p>
+
+    <!-- Details card: repeat the row for each fact; delete the card if there are none -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ecf5fe;border:1px solid #dbe4ed;border-radius:16px;">
+      <tr><td style="padding:6px 18px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding:12px 0;border-bottom:1px solid #dbe4ed;width:38%;font-size:13px;font-weight:800;color:#717973;vertical-align:top;">{{ROW_LABEL}}</td>
+            <td style="padding:12px 0;border-bottom:1px solid #dbe4ed;font-size:15px;font-weight:700;color:#141d23;vertical-align:top;">{{ROW_VALUE}}</td>
+          </tr>
+        </table>
+      </td></tr>
+    </table>
+
+    <!-- Heads-up callout: optional, delete if nothing needs flagging -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:18px;background:#fffaf0;border:1px solid #fdcb52;border-radius:14px;">
+      <tr><td style="padding:14px 18px;font-size:14px;line-height:1.55;color:#5b4300;">
+        <strong style="color:#5b4300;">Heads up:</strong> {{HEADS_UP}}
+      </td></tr>
+    </table>
+
+    <!-- Button: optional, delete if there is no link -->
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:26px 0 6px;">
+      <tr><td style="background:#012d1d;border-radius:999px;">
+        <a href="{{BUTTON_URL}}" style="display:inline-block;padding:14px 26px;font-size:15px;font-weight:800;color:#ffffff;text-decoration:none;">{{BUTTON_TEXT}} &rarr;</a>
+      </td></tr>
+    </table>
+
+    <p style="margin:22px 0 26px;font-size:15px;line-height:1.6;color:#414844;">{{SIGN_OFF}}</p>
+  </td></tr>
+
+  <!-- Footer -->
+  <tr><td style="background:#1b4332;border-radius:0 0 20px 20px;padding:20px 28px;">
+    <p style="margin:0;font-size:13px;line-height:1.5;color:#a5d0b9;">
+      <strong style="color:#ffffff;">GrootOps</strong> &middot; AI back office for real estate<br>
+      Prepared by Ops for {{AGENCY}}
+    </p>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>
