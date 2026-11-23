@@ -25,6 +25,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Callable
 from urllib.parse import parse_qsl, urlsplit
 
+from groot_ops.case_search import CaseSearch
 from groot_ops.telegram_channel import OpsChat, TelegramChannel
 from groot_ops.whatsapp_channel import WhatsAppChannel
 
@@ -301,10 +302,17 @@ def main() -> None:
     telegram_file = os.environ.get("BRIDGE_TELEGRAM_FILE")
     if telegram_file:
         ops_chat = OpsChat(os.environ.get("BRIDGE_OPS_API", "http://127.0.0.1:8799"), os.environ["BRIDGE_OPS_BOT_ID"])
+        research = None
+        case_search_file = os.environ.get("BRIDGE_CASE_SEARCH_FILE")
+        if case_search_file and os.path.exists(case_search_file):
+            case_search_cfg = _read_json(case_search_file)
+            research = CaseSearch(case_search_cfg["api_base"], case_search_cfg["bot_id"]).answer
+            log.info("Case Search on Telegram /search")
         telegram = TelegramChannel(
             config=lambda: _read_json(telegram_file),
             state_path=os.environ.get("BRIDGE_TELEGRAM_STATE", "telegram-allowed.json"),
             ops=ops_chat,
+            research=research,
         )
         threading.Thread(target=telegram.serve_forever, name="telegram", daemon=True).start()
     host, port = os.environ.get("BRIDGE_HOST", "127.0.0.1"), int(os.environ.get("BRIDGE_PORT", "8810"))

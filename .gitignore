@@ -26,3 +26,6 @@ configs/demo_clients/
 # Generated local activity logs
 data/activity_log.csv
 .vercel
+
+# Case Search evaluation reports (contain law-report extracts)
+data/legal/

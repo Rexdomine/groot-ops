@@ -50,6 +50,10 @@ TIMEOUT_REPLY = "This is taking longer than expected. I'll keep working on it; c
 CARD_UNANSWERED = "No answer came for the approval, so Ops is still waiting. You can answer it in the GrootOps web app."
 CARD_WAIT = 30 * 60
 FAILED_REPLY ="Sorry, something went wrong reaching the back office. Please try again in a minute."
+SEARCH_HELP = "Send /search followed by your research question, e.g. /search grounds to set aside an incompetent writ of summons"
+SEARCH_OFF = "Case Search isn't switched on for this assistant yet."
+SEARCH_STARTED = "Searching NWLR Online. This usually takes a few minutes."
+SEARCH_FAILED = "Sorry, the search didn't finish. Please try again in a few minutes."
 
 
 def http_json(url: str, body: dict | None = None, timeout: float = 70) -> tuple[int, dict]:
@@ -262,8 +266,11 @@ class OpsChat:
 
 class TelegramChannel:
     def __init__(self, config: Callable[[], dict], state_path: str, ops: OpsChat,
-                 call: Callable = http_json, run: Callable[[Callable[[], None]], None] | None = None):
+                 call: Callable = http_json, run: Callable[[Callable[[], None]], None] | None = None,
+                 research: Callable[[str, Callable[[], None]], str] | None = None):
+        """`research(question, on_wait)` answers /search with ready-to-send text; None leaves /search off."""
         self.config, self.state_path, self.ops, self._call = config, state_path, ops, call
+        self.research = research
         self._run = run or (lambda fn: threading.Thread(target=fn, daemon=True).start())
         self._chat_locks: dict[int, threading.Lock] = {}
         self._lock = threading.Lock()
@@ -379,11 +386,30 @@ class TelegramChannel:
         if chat_id not in self.allowed():
             self.send(chat_id, NOT_PAIRED)
             return
+        if text.startswith("/search"):
+            question = text[len("/search"):].strip()
+            if not self.research:
+                self.send(chat_id, SEARCH_OFF)
+            elif not question:
+                self.send(chat_id, SEARCH_HELP)
+            else:
+                self._run(lambda: self._research(chat_id, question))
+            return
         body = message_to_text(message)
         if not body:
             self.send(chat_id, NON_TEXT)
             return
         self._run(lambda: self._process(chat_id, body))
+
+    def _research(self, chat_id: int, question: str) -> None:
+        # Not under the chat's Ops lock: a long search must not hold up the agent's back-office messages.
+        self.send(chat_id, SEARCH_STARTED)
+        try:
+            reply = self.research(question, lambda: self.typing(chat_id))
+        except Exception:
+            log.exception("Case Search failed")
+            reply = SEARCH_FAILED
+        self.send(chat_id, reply or SEARCH_FAILED)
 
     def _process(self, chat_id: int, body: str) -> None:
         with self._lock:

@@ -1,0 +1,10 @@
+# Case Search pilot: where Lex lives and the test questions from the 20 Nov 2026 lawyer meeting.
+# api_base is the OpenMausBot API on the VPS, reached through an SSH tunnel:
+#   ssh -N -L 18799:127.0.0.1:8799 grootops-vps
+api_base: http://127.0.0.1:18799
+bot_id: 2ef1a866-b51d-47a1-8f06-3d78bbd2dfa1
+
+eval_questions:
+  - Service on a defendant in a manner different from the one the court ordered; is it valid?
+  - Grounds to set aside an incompetent writ of summons
+  - Does the Federal High Court have jurisdiction over banker-customer relationship disputes?
