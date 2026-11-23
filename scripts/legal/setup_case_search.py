@@ -28,6 +28,9 @@ RUNTIME_SETTINGS = {
     "browser": True,
     "approvalMode": "full",
     "outbound": {"policy": "ask"},
+    # Lex only needs its browser: dropping unused tool groups and memory keeps every step's context small.
+    "toolsOff": ["meetings", "data", "pages", "images", "email"],
+    "memoryEnabled": False,
 }
 
 
