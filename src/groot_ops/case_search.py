@@ -16,6 +16,7 @@ Standard library only, so it runs in the bridge on the VPS without extra install
 """
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import re
@@ -133,6 +134,26 @@ def check_source_url(url: str) -> str | None:
     return None
 
 
+_NWLR_CITE = re.compile(r"NWLR\s*\(\s*Pt\.?\s*(\d+)\s*\)\s*(\d+)", re.IGNORECASE)
+_NWLR_CASE_ID = re.compile(r"^(\d+)_\d+_(\d+)$")
+
+
+def link_mismatch(citation: str, url: str) -> str | None:
+    """NWLR case pages are /dashboard/legal-research/<base64 of 'Part_x_Page'>: the link must be the cited report."""
+    cite = _NWLR_CITE.search(citation or "")
+    if not cite:
+        return None
+    slug = urlsplit(url or "").path.rstrip("/").rsplit("/", 1)[-1]
+    try:
+        decoded = base64.b64decode(slug + "=" * (-len(slug) % 4), validate=True).decode("ascii")
+    except (ValueError, UnicodeDecodeError):
+        return None
+    page = _NWLR_CASE_ID.match(decoded)
+    if not page or (page.group(1), page.group(2)) == (cite.group(1), cite.group(2)):
+        return None
+    return f"link opens (Pt. {page.group(1)}) {page.group(2)}, not the cited (Pt. {cite.group(1)}) {cite.group(2)}"
+
+
 def check_authority(item: dict) -> tuple[Authority | None, str]:
     case_name = _text(item.get("case_name"), 300)
     citation = _text(item.get("citation"), 120)
@@ -146,7 +167,7 @@ def check_authority(item: dict) -> tuple[Authority | None, str]:
         return None, "no verbatim quote"
     if len(quote.split()) > MAX_QUOTE_WORDS:
         return None, "quote is too long to be a pinpoint passage"
-    source_problem = check_source_url(source_url)
+    source_problem = check_source_url(source_url) or link_mismatch(citation, source_url)
     if source_problem:
         return None, source_problem
     year = item.get("year")

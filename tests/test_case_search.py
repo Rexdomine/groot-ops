@@ -3,7 +3,7 @@ import json
 import pytest
 
 from groot_ops.case_search import (
-    CITATION_RE, CaseSearch, build_request, check_source_url, format_for_chat, format_markdown, parse_reply,
+    CITATION_RE, CaseSearch, build_request, check_authority, check_source_url, format_for_chat, format_markdown, parse_reply,
     preflight, verify,
 )
 from groot_ops.telegram_channel import SEARCH_HELP, SEARCH_OFF, SEARCH_STARTED, TelegramChannel
@@ -62,6 +62,18 @@ def test_malformed_citations_are_refused(citation):
 ])
 def test_source_must_be_a_case_page_on_nwlr_online(url, ok):
     assert (check_source_url(url) is None) is ok
+
+
+def test_nwlr_links_must_open_the_cited_report():
+    from groot_ops.case_search import link_mismatch
+    base = "https://nwlronline.com/dashboard/legal-research/"
+    assert link_mismatch("(1989) 3 NWLR (Pt. 109) 250", base + "MTA5XzFfMjUw") is None        # 109_1_250
+    assert link_mismatch("(2009) 7 NWLR (Pt. 1139) 97", base + "MTEzOV8xXzk3") is None         # 1139_1_97
+    assert "not the cited (Pt. 1689) 374" in link_mismatch("(2019) 13 NWLR (Pt. 1689) 374", base + "MTcxMF8xXzE=")
+    assert link_mismatch("(2017) LPELR-42345(SC)", base + "MTcxMF8xXzE=") is None              # not an NWLR cite
+    assert link_mismatch("(2019) 4 NWLR (Pt. 1662) 242", base + "not-base64!") is None
+    _, reason = check_authority(authority(citation="(2019) 13 NWLR (Pt. 1689) 374", year=2019, source_url=base + "MTcxMF8xXzE="))
+    assert "link opens (Pt. 1710) 1" in reason
 
 
 def test_parse_reply_takes_the_last_json_block_or_explains_why_not():
