@@ -23,7 +23,7 @@ import re
 import threading
 from dataclasses import dataclass, field
 from typing import Callable
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 from groot_ops.telegram_channel import OpsChat, http_json
 
@@ -143,7 +143,7 @@ def link_mismatch(citation: str, url: str) -> str | None:
     cite = _NWLR_CITE.search(citation or "")
     if not cite:
         return None
-    slug = urlsplit(url or "").path.rstrip("/").rsplit("/", 1)[-1]
+    slug = unquote(urlsplit(url or "").path.rstrip("/").rsplit("/", 1)[-1])
     try:
         decoded = base64.b64decode(slug + "=" * (-len(slug) % 4), validate=True).decode("ascii")
     except (ValueError, UnicodeDecodeError):

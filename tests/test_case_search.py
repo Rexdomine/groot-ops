@@ -70,6 +70,8 @@ def test_nwlr_links_must_open_the_cited_report():
     assert link_mismatch("(1989) 3 NWLR (Pt. 109) 250", base + "MTA5XzFfMjUw") is None        # 109_1_250
     assert link_mismatch("(2009) 7 NWLR (Pt. 1139) 97", base + "MTEzOV8xXzk3") is None         # 1139_1_97
     assert "not the cited (Pt. 1689) 374" in link_mismatch("(2019) 13 NWLR (Pt. 1689) 374", base + "MTcxMF8xXzE=")
+    assert link_mismatch("(2022) 11 NWLR (Pt. 1842) 405", base + "MTg0Ml8xXzQwNQ%3D%3D") is None  # URL-encoded padding
+    assert "not the cited" in link_mismatch("(2022) 11 NWLR (Pt. 1842) 406", base + "MTg0Ml8xXzQwNQ%3D%3D")
     assert link_mismatch("(2017) LPELR-42345(SC)", base + "MTcxMF8xXzE=") is None              # not an NWLR cite
     assert link_mismatch("(2019) 4 NWLR (Pt. 1662) 242", base + "not-base64!") is None
     _, reason = check_authority(authority(citation="(2019) 13 NWLR (Pt. 1689) 374", year=2019, source_url=base + "MTcxMF8xXzE="))
