@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sign in · GrootOps Legal</title>
+<meta name="theme-color" content="#012d1d">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<main class="login">
+  <div class="login-card">
+    <div class="orb" style="margin:0 auto" aria-hidden="true"><span class="core"><span class="swirl"></span><span class="blob b1"></span><span class="blob b2"></span><span class="gloss"></span></span></div>
+    <h1>GrootOps Legal</h1>
+    <p>Case research on NWLR Online, in plain English.</p>
+    <form id="form" novalidate>
+      <label>Email<input type="email" id="email" autocomplete="username" required></label>
+      <label>Password<input type="password" id="password" autocomplete="current-password" required></label>
+      <p class="err" id="err" role="alert"></p>
+      <button type="submit" id="go">Sign in</button>
+    </form>
+  </div>
+</main>
+<script>
+const form = document.getElementById('form'), err = document.getElementById('err'), go = document.getElementById('go');
+form.addEventListener('input', () => { err.textContent = ''; });
+form.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const email = document.getElementById('email').value.trim(), password = document.getElementById('password').value;
+  if (!email || !password) { err.textContent = 'Enter your email and password.'; return; }
+  go.disabled = true; go.textContent = 'Signing in…';
+  try {
+    const res = await fetch('/api/login', {method: 'POST', headers: {'Content-Type': 'application/json', 'X-Requested-With': 'grootops-legal'},
+      body: JSON.stringify({email, password})});
+    if (res.ok) { location.href = '/'; return; }
+    const data = await res.json().catch(() => ({}));
+    err.textContent = data.detail || 'Sign-in failed. Try again.';
+  } catch { err.textContent = "Can't reach GrootOps Legal. Check your connection."; }
+  go.disabled = false; go.textContent = 'Sign in';
+});
+</script>
+</body>
+</html>

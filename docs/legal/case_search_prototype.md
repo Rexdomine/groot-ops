@@ -60,6 +60,37 @@ After a Chrome update, copy the new version and update both the AppArmor profile
 
 5. Watch a search live in the GrootOps web app: Lex's chat shows the browser as it works.
 
+## Web app (GrootOps Legal)
+
+Lawyers use a chat-style web app at **https://legal.207-180-242-149.sslip.io**. It has search history down the side, live research steps with the animated orb, case cards (copy citation, open on NWLR, save), thumbs up/down, saved authorities and a Word memo export. It is separate from the real estate product: its own service, user, database and address. The real estate Telegram bot no longer has `/search`; a dedicated legal Telegram bot comes later.
+
+| Piece | Where |
+| --- | --- |
+| Code | `src/groot_ops/legal/` (FastAPI app, SQLite store, search runner, memo builder, static chat UI) |
+| Service | `grootops-legal` systemd unit, user `grootlegal`, uvicorn on 127.0.0.1:8820, Python venv in `/opt/grootops-legal/venv` |
+| Data | `/var/lib/grootops-legal/legal.sqlite3`: accounts, sessions, searches, saved authorities |
+| HTTPS | the existing `grootops-caddy` container; block in `/etc/grootops-caddy/Caddyfile` (the sslip.io name points at the VPS, and Caddy gets the certificate itself) |
+
+Add a lawyer account (on the VPS; the password is typed at a hidden prompt):
+
+```bash
+ssh -t grootops-vps 'grootops-legal-user add-user --email ada@firm.ng --name "Ada Obi" --firm "Pilot Chambers"'
+```
+
+Deploy code changes:
+
+```bash
+rsync -a --delete --exclude __pycache__ src/groot_ops/ grootops-vps:/opt/grootops-legal/src/groot_ops/ && ssh grootops-vps 'systemctl restart grootops-legal'
+```
+
+Preview the design locally with sample results (clearly labelled), no Lex needed:
+
+```bash
+LEGAL_PREVIEW=1 LEGAL_DB=/tmp/legal-preview.sqlite3 PYTHONPATH=src .venv/bin/uvicorn --factory groot_ops.legal.app:create_app --port 8820
+```
+
+The sidebar's status line shows "NWLR Online connected" once the login is saved, and "NWLR login needed" until then. A restart of the service marks any unfinished search as failed, with a Try again link.
+
 ## Pilot pass mark (proposed in the build plan)
 
 At least 3 relevant authorities per test question that the lawyer agrees are on point, no invented citations, an answer in under 5 minutes, and better than their manual search on 2 of the 3 questions.

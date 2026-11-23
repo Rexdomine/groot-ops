@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>GrootOps Legal</title>
+<meta name="theme-color" content="#012d1d">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<div class="shell" id="shell">
+  <nav class="rail" aria-label="Main">
+    <div class="orb sm logo" aria-hidden="true"><span class="core"><span class="swirl"></span><span class="blob b1"></span><span class="blob b2"></span><span class="gloss"></span></span></div>
+    <div class="avatar" id="avatar" title=""></div>
+    <button class="new-btn" data-action="new" title="New search" aria-label="New search"><i class="ti ti-plus"></i></button>
+    <button class="rail-btn on" id="rail-research" data-action="new" title="Research" aria-label="Research"><i class="ti ti-scale"></i></button>
+    <button class="rail-btn" id="rail-saved" data-action="saved" title="Saved authorities" aria-label="Saved authorities"><i class="ti ti-bookmark"></i></button>
+    <span class="spacer"></span>
+    <button class="rail-btn" data-action="logout" title="Sign out" aria-label="Sign out"><i class="ti ti-logout"></i></button>
+  </nav>
+
+  <aside class="panel" aria-label="Your searches">
+    <div class="panel-head">
+      <strong>Searches</strong>
+      <span>
+        <button class="icon-btn" data-action="saved" title="Saved authorities" aria-label="Saved authorities"><i class="ti ti-bookmark"></i></button>
+        <button class="icon-btn" data-action="new" title="New search" aria-label="New search"><i class="ti ti-edit"></i></button>
+      </span>
+    </div>
+    <div class="threads" id="threads"></div>
+    <div class="panel-foot">
+      <span class="status" id="status"><i class="ti ti-loader-2"></i> Checking NWLR Online…</span>
+      <span class="who" id="who"></span>
+      <button class="signout" data-action="logout">Sign out</button>
+    </div>
+  </aside>
+  <div class="scrim" data-action="close-drawer"></div>
+
+  <main class="main" id="main">
+    <div class="topbar">
+      <button class="icon-btn" data-action="open-drawer" aria-label="Open your searches"><i class="ti ti-menu-2"></i></button>
+      <span class="brand"><span class="orb xs" aria-hidden="true"><span class="core"><span class="swirl"></span><span class="blob b1"></span><span class="blob b2"></span><span class="gloss"></span></span></span>GrootOps Legal</span>
+      <button class="icon-btn" data-action="new" aria-label="New search"><i class="ti ti-edit"></i></button>
+    </div>
+    <div class="banner" id="banner" hidden></div>
+    <div id="view" style="display:flex;flex-direction:column;flex:1;min-height:0"></div>
+  </main>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

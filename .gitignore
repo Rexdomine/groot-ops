@@ -29,3 +29,7 @@ data/activity_log.csv
 
 # Case Search evaluation reports (contain law-report extracts)
 data/legal/
+
+# GrootOps Legal local databases
+legal.sqlite3
+*.sqlite3
