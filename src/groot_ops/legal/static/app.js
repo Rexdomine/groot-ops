@@ -72,7 +72,11 @@
   async function loadThreads() { state.threads = (await api('/api/threads')).threads; renderThreads(); }
 
   async function deleteThread(t) {
-    if (!window.confirm(`Delete "${t.title}" from your history?`)) return;
+    const ok = await confirmDialog({
+      title: 'Delete this search?', body: `“${t.title}” and its results will be removed from your history. This can't be undone.`,
+      confirmLabel: 'Delete', danger: true, icon: 'trash',
+    });
+    if (!ok) return;
     await api(`/api/threads/${t.id}`, { method: 'DELETE' });
     if (state.threadId === t.id) goHome();
     loadThreads();
@@ -87,6 +91,45 @@
       node.replaceChildren(icon(s.nwlr === 'connected' ? 'circle-check' : 'alert-circle'), ' ', text);
       node.title = s.detail || '';
     } catch { /* the next refresh tries again */ }
+  }
+
+  // --- dialog --------------------------------------------------------------------------------
+  // The one confirmation dialog used everywhere, in place of the browser's confirm(). Resolves true/false.
+  function confirmDialog({ title, body, confirmLabel = 'Confirm', cancelLabel = 'Cancel', danger = false, icon: iconName }) {
+    return new Promise((resolve) => {
+      closeOpenMenu();
+      const returnFocus = document.activeElement;
+      const titleId = `dlg-${Math.random().toString(36).slice(2, 8)}`;
+      const cancel = el('button', { type: 'button', class: 'btn' }, cancelLabel);
+      const confirm = el('button', { type: 'button', class: `btn ${danger ? 'danger' : 'primary'}` }, confirmLabel);
+      const card = el('div', { class: 'dialog', role: 'alertdialog', 'aria-modal': 'true', 'aria-labelledby': titleId },
+        iconName ? el('div', { class: `dialog-icon ${danger ? 'danger' : ''}` }, icon(iconName)) : null,
+        el('h2', { id: titleId, text: title }),
+        body ? el('p', { text: body }) : null,
+        el('div', { class: 'dialog-actions' }, cancel, confirm));
+      const layer = el('div', { class: 'dialog-layer' }, card);
+      const done = (value) => {
+        document.removeEventListener('keydown', onKey, true);
+        layer.classList.add('leaving');
+        setTimeout(() => layer.remove(), 160);
+        if (returnFocus && returnFocus.focus) returnFocus.focus();
+        resolve(value);
+      };
+      const onKey = (e) => {
+        if (e.key === 'Escape') { e.preventDefault(); done(false); }
+        else if (e.key === 'Tab') {  // keep focus inside the dialog
+          const order = [cancel, confirm], i = order.indexOf(document.activeElement);
+          e.preventDefault(); order[(i + (e.shiftKey ? -1 : 1) + order.length) % order.length].focus();
+        }
+      };
+      cancel.addEventListener('click', () => done(false));
+      confirm.addEventListener('click', () => done(true));
+      layer.addEventListener('mousedown', (e) => { if (e.target === layer) done(false); });
+      document.addEventListener('keydown', onKey, true);
+      document.body.append(layer);
+      // A destructive action starts on Cancel so Enter alone never deletes.
+      (danger ? cancel : confirm).focus();
+    });
   }
 
   // --- dropdown ------------------------------------------------------------------------------
