@@ -129,6 +129,19 @@ def test_progress_only_moves_forward():
     assert step_from(["Signing in"], 2) == 2
 
 
+def test_progress_follows_lex_browser_actions_when_it_works_silently():
+    from groot_ops.legal.runner import describe
+    search = 'mcp__browser__agent_browser_open {"url": "https://nwlronline.com/dashboard/legal-research?search_term=service%20contrary%20to%20order"}'
+    case = 'mcp__browser__agent_browser_open {"url": "https://nwlronline.com/dashboard/legal-research/MTU3N18xXzQxMA%3D%3D"}'
+    read = 'mcp__browser__agent_browser_eval {"script": "(async()=>{const K=[\'service\']"}'
+    assert step_from([], 0, [search]) == 1
+    assert step_from([], 0, [search, case, read]) == 2
+    assert step_from([], 2, [search]) == 2
+    assert describe([search]) == "Searching: service contrary to order"
+    assert describe([search, case, read, case, read]) == "Reading report 2"
+    assert describe([]) == ""
+
+
 def test_compose_question():
     assert compose_question("q") == "q"
     assert compose_question("q", "appeal", "earlier") == "Earlier question in this matter: earlier. Follow-up: q Only cite authorities from the Court of Appeal."

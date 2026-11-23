@@ -12,6 +12,7 @@ import re
 import threading
 import time
 from typing import Callable
+from urllib.parse import unquote_plus
 
 from groot_ops.case_search import CaseSearch
 from groot_ops.legal.store import LegalStore
@@ -37,36 +38,65 @@ def compose_question(question: str, court: str = "", previous: str | None = None
     return " ".join(parts)
 
 
-def step_from(texts: list[str], current: int) -> int:
-    """Progress only moves forward, and only as far as Lex's own narration shows."""
+_SEARCH_TERM = re.compile(r"[?&]search_term=([^&\"\s]+)")
+
+
+def step_from(texts: list[str], current: int, actions: list[str] = ()) -> int:
+    """Progress only moves forward, as far as Lex's notes or its browser actions show."""
     step = current
     for text in texts:
         if step < 1 and _SEARCHING.search(text):
             step = 1
         if step >= 1 and _READING.search(text):
             step = max(step, 2)
+    for action in actions:
+        if "search_term=" in action:
+            step = max(step, 1)
+        elif "/dashboard/legal-research/" in action or "const K=" in action:
+            step = max(step, 2)
     return step
 
 
+def describe(actions: list[str]) -> str:
+    """A plain note for the lawyer from Lex's latest browser action, for when Lex works without commentary."""
+    reports = sum(1 for a in actions if "const K=" in a)
+    for action in reversed(actions):
+        term = _SEARCH_TERM.search(action)
+        if term:
+            return f"Searching: {unquote_plus(term.group(1))}"[:NARRATION_CHARS]
+        if "const K=" in action or "/dashboard/legal-research/" in action:
+            return f"Reading report {max(reports, 1)}"
+    return ""
+
+
 class LexWatcher:
-    """Reads Lex's chat for messages after a point in time."""
+    """Reads Lex's chat after a point in time: its notes, and its browser actions (tool name and input)."""
 
     def __init__(self, api_base: str, bot_id: str, call: Callable = http_json):
         self.api_base, self.bot_id, self._call = api_base.rstrip("/"), bot_id, call
         self._thread: str | None = None
 
-    def texts_since(self, since_ms: int) -> list[str]:
+    def poll(self, since_ms: int) -> tuple[list[str], list[str]]:
         if not self._thread:
             status, bot = self._call(f"{self.api_base}/api/bots/{self.bot_id}")
             self._thread = (bot.get("bot") or bot).get("mainThreadId") if status < 300 else None
             if not self._thread:
-                return []
+                return [], []
         status, page = self._call(f"{self.api_base}/api/threads/{self._thread}/messages")
         if status >= 300:
-            return []
-        return [str(m.get("text") or "").strip() for m in page.get("messages") or []
-                if m.get("role") == "bot" and m.get("kind") == "text" and int(m.get("at") or 0) >= since_ms
-                and str(m.get("text") or "").strip()]
+            return [], []
+        texts, actions = [], []
+        for m in page.get("messages") or []:
+            if m.get("role") != "bot" or int(m.get("at") or 0) < since_ms:
+                continue
+            if m.get("kind") == "text" and str(m.get("text") or "").strip():
+                texts.append(str(m["text"]).strip())
+            elif m.get("kind") == "activity" and isinstance(m.get("tool"), dict):
+                actions.append(f"{m['tool'].get('name', '')} {str(m['tool'].get('input') or '')[:600]}")
+        return texts, actions
+
+    def texts_since(self, since_ms: int) -> list[str]:
+        return self.poll(since_ms)[0]
 
 
 def result_dict(result) -> dict:
@@ -114,11 +144,16 @@ class SearchRunner:
             if self.watcher is None:
                 return
             try:
-                texts = self.watcher.texts_since(started_ms)
+                if hasattr(self.watcher, "poll"):
+                    texts, actions = self.watcher.poll(started_ms)
+                else:
+                    texts, actions = self.watcher.texts_since(started_ms), []
             except Exception:
                 return
-            step = step_from(texts, state["step"])
-            narration = texts[-1][:NARRATION_CHARS] if texts else state["narration"]
+            step = step_from(texts, state["step"], actions)
+            # Lex works without commentary, so its own words are rare: fall back to what it is doing.
+            latest = texts[-1] if texts and not texts[-1].lstrip().startswith("```") else ""
+            narration = (latest[:NARRATION_CHARS] or describe(actions)) or state["narration"]
             if step != state["step"] or narration != state["narration"]:
                 state.update(step=step, narration=narration)
                 self.store.update_search(search_id, step=step, narration=narration)
