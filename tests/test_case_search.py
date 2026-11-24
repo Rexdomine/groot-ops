@@ -78,6 +78,28 @@ def test_nwlr_links_must_open_the_cited_report():
     assert "link opens (Pt. 1710) 1" in reason
 
 
+def test_square_bracket_years_are_accepted_and_shown_in_round_brackets():
+    base = "https://nwlronline.com/dashboard/legal-research/"
+    found, reason = check_authority(authority(citation="[2002] 9 NWLR (Pt. 773) 475", year=2002, source_url=base + "NzczXzFfNDc1"))
+    assert found is not None, reason
+    assert found.citation == "(2002) 9 NWLR (Pt. 773) 475"
+
+
+def test_headnote_catchlines_are_not_accepted_as_quotes():
+    _, reason = check_authority(authority(
+        quote="Pre-action notice - When required for a suit against a public officer - Relevant considerations."))
+    assert "headnote" in reason
+    found, _ = check_authority(authority(quote="A pre-action notice is a condition precedent - a statutory one."))
+    assert found is not None
+
+
+def test_an_nwlr_security_check_is_reported_as_a_rate_limit():
+    result = verify({"status": "site_error", "authorities": [], "note": "NWLR rate limit"})
+    assert result.status == "rate_limited"
+    assert "limiting searches" in format_for_chat("q", result)
+    assert verify({"status": "site_error", "authorities": [], "note": "Page failed to load"}).status == "site_error"
+
+
 def test_parse_reply_takes_the_last_json_block_or_explains_why_not():
     data, problem = parse_reply("Working...\n" + lex_reply(answer="first") + "\n" + lex_reply(answer="second"))
     assert data["answer"] == "second" and problem == ""

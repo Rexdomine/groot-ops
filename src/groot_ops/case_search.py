@@ -35,7 +35,8 @@ ALLOWED_SOURCE_HOSTS = (NWLR_HOST,)
 # Pages that can never be the case Lex read.
 NON_CASE_PATHS = {"", "/", "/auth/login", "/dashboard", "/dashboard/legal-research", "/search-feedback"}
 
-STATUSES = {"ok", "no_results", "login_failed", "site_error"}
+STATUSES = {"ok", "no_results", "login_failed", "site_error", "rate_limited"}
+_RATE_LIMIT_WORDS = re.compile(r"rate.?limit|\b429\b|security (check|verification)|cloudflare", re.IGNORECASE)
 MAX_AUTHORITIES = 10
 MAX_QUOTE_WORDS = 120
 MAX_QUESTION_CHARS = 2000
@@ -50,6 +51,9 @@ _CITATION_PATTERNS = (
     r"\(\d{4}\)\s*\d+\s*(?:SC|SCNJ|SCM|SCNLR|NSCC|NLR|WRN|FWLR)\s*(?:\(\s*Pt\.?\s*[\dIVX]+\s*\)\s*)?\d+",
 )
 CITATION_RE = re.compile(r"^\s*(?:" + "|".join(_CITATION_PATTERNS) + r")(?:\s*(?:at|@)\s*[\w\-–, ]+)?\s*$", re.IGNORECASE)
+_SQUARE_YEAR = re.compile(r"^\s*\[(\d{4})\]")
+# Headnote catchlines read "Topic - Subtopic - Whether ...": the publisher's index, not the court's words.
+_CATCHLINE = re.compile(r"\S\s+-\s+\S.*\S\s+-\s+\S")
 _SIGN_IN_WORDS = re.compile(r"\b(sign(ed)?[ -]?in|log(ged)?[ -]?in|saved login|credentials?)\b", re.IGNORECASE)
 _JSON_BLOCK = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL)
 
@@ -156,7 +160,7 @@ def link_mismatch(citation: str, url: str) -> str | None:
 
 def check_authority(item: dict) -> tuple[Authority | None, str]:
     case_name = _text(item.get("case_name"), 300)
-    citation = _text(item.get("citation"), 120)
+    citation = _SQUARE_YEAR.sub(r"(\1)", _text(item.get("citation"), 120))
     quote = _text(item.get("quote"), 2000)
     source_url = _text(item.get("source_url"), 500)
     if not case_name:
@@ -165,6 +169,8 @@ def check_authority(item: dict) -> tuple[Authority | None, str]:
         return None, f"citation '{citation or 'missing'}' is not in a recognised law-report format"
     if not quote:
         return None, "no verbatim quote"
+    if _CATCHLINE.search(quote):
+        return None, "quote is a headnote catchline, not the court's words"
     if len(quote.split()) > MAX_QUOTE_WORDS:
         return None, "quote is too long to be a pinpoint passage"
     source_problem = check_source_url(source_url) or link_mismatch(citation, source_url)
@@ -195,6 +201,8 @@ def verify(data: dict | None, problem: str = "") -> SearchResult:
         return SearchResult(status="site_error", note=problem or "No result from Lex.")
     status = _text(data.get("status"), 20).lower()
     status = status if status in STATUSES else "site_error"
+    if status == "site_error" and _RATE_LIMIT_WORDS.search(_text(data.get("note"), 600)):
+        status = "rate_limited"
     result = SearchResult(
         status=status, answer=_text(data.get("answer"), 1500), note=_text(data.get("note"), 600),
         searches_run=[_text(s, 200) for s in (data.get("searches_run") or []) if _text(s)][:12],
@@ -228,6 +236,7 @@ STATUS_MESSAGES = {
     "no_results": "I couldn't find an authority on point in NWLR Online.",
     "login_failed": "I couldn't sign in to NWLR Online, so no search ran. The firm's login may need updating.",
     "site_error": "NWLR Online or the research assistant had a problem, so this search didn't finish.",
+    "rate_limited": "NWLR Online is limiting searches from GrootOps right now, so this search didn't finish. Try again in about an hour.",
 }
 
 

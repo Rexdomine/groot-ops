@@ -11,6 +11,7 @@
     no_results: "Lex couldn't find an authority on point in NWLR Online.",
     login_failed: "Lex couldn't sign in to NWLR Online, so no search ran. The firm's NWLR login needs attention.",
     site_error: "NWLR Online or the research assistant had a problem, so this search didn't finish.",
+    rate_limited: "NWLR Online is limiting searches from GrootOps right now, so this search didn't finish. Try again in about an hour.",
   };
   const state = { me: null, threads: [], threadId: null, thread: null, court: '', poll: null, view: 'home', typed: new Set(), savedCitations: new Set() };
 
