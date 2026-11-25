@@ -29,4 +29,4 @@ pythonpath = ["src"]
 testpaths = ["tests"]
 
 [tool.setuptools.package-data]
-groot_ops = ["templates/*.html", "static/*.css"]
+groot_ops = ["templates/*.html", "static/*.css", "legal/static/*"]
