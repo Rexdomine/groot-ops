@@ -98,6 +98,8 @@ def test_an_nwlr_security_check_is_reported_as_a_rate_limit():
     assert result.status == "rate_limited"
     assert "limiting searches" in format_for_chat("q", result)
     assert verify({"status": "site_error", "authorities": [], "note": "Page failed to load"}).status == "site_error"
+    # Lex sometimes reports a block as no_results, or with its rejected leftovers: still a rate limit.
+    assert verify({"status": "no_results", "authorities": [], "note": "NWLR hit a 429/security check"}).status == "rate_limited"
 
 
 def test_parse_reply_takes_the_last_json_block_or_explains_why_not():

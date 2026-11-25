@@ -121,3 +121,11 @@ def test_known_authorities_go_into_the_request_compactly():
     assert KNOWN_HEADER.strip() in request and CASE["source_url"] in request
     assert build_request("limitation simple contract") == build_request("limitation simple contract", [])
     assert "contract" in words("Contracts") and "the" not in words("the court")
+
+
+def test_a_block_mentioned_alongside_verified_results_still_pauses_searches(tmp_path):
+    data = {**GOOD, "note": "Two verified; NWLR then showed a security check."}
+    store, user, runner, search, clock, sleeps = setup(tmp_path, data=data)
+    assert ask(store, user, runner, "first question about service")["result"]["status"] == "ok"
+    ask(store, user, runner, "second question about jurisdiction")
+    assert sum(sleeps) >= HOUR

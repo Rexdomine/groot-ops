@@ -17,7 +17,7 @@ from typing import Callable
 from groot_ops.legal.store import LegalStore
 
 HOUR = 3600.0
-PAGES_PER_HOUR = 30        # NWLR's real threshold isn't published; start low and tune from what we see
+PAGES_PER_HOUR = 12        # NWLR's threshold isn't published; it blocked at 16 pages in an hour on 2026-11-25
 PAGES_PER_SEARCH = 8       # a typical search: 1-3 results pages and 3-6 report pages
 BLOCK_COOLDOWN = 2 * HOUR  # after NWLR shows its security check, leave it alone this long (1 h proved too short)
 CACHE_DAYS = 30

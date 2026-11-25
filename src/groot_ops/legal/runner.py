@@ -14,7 +14,7 @@ import time
 from typing import Callable
 from urllib.parse import unquote_plus
 
-from groot_ops.case_search import CaseSearch
+from groot_ops.case_search import CaseSearch, hit_rate_limit
 from groot_ops.legal.nwlr import PAGES_PER_SEARCH, PageBudget, ResultCache, count_pages, waiting_note
 from groot_ops.legal.store import LegalStore
 from groot_ops.telegram_channel import http_json
@@ -173,7 +173,7 @@ class SearchRunner:
         self.store.update_search(search_id, step=3)
         if self.budget is not None:
             self.budget.record(self._pages_opened(started_ms))
-            if result.status == "rate_limited":
+            if result.status == "rate_limited" or hit_rate_limit(result):
                 self.budget.blocked()
         data = result_dict(result)
         if self.cache is not None:

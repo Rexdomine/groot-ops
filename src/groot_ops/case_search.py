@@ -211,8 +211,6 @@ def verify(data: dict | None, problem: str = "") -> SearchResult:
         return SearchResult(status="site_error", note=problem or "No result from Lex.")
     status = _text(data.get("status"), 20).lower()
     status = status if status in STATUSES else "site_error"
-    if status == "site_error" and _RATE_LIMIT_WORDS.search(_text(data.get("note"), 600)):
-        status = "rate_limited"
     result = SearchResult(
         status=status, answer=_text(data.get("answer"), 1500), note=_text(data.get("note"), 600),
         searches_run=[_text(s, 200) for s in (data.get("searches_run") or []) if _text(s)][:12],
@@ -239,7 +237,14 @@ def verify(data: dict | None, problem: str = "") -> SearchResult:
         result.status = "no_results"
         if result.rejected:
             result.note = (result.note + " " if result.note else "") + "Every authority Lex returned failed the citation checks."
+    if result.status in ("site_error", "no_results") and hit_rate_limit(result):
+        result.status = "rate_limited"
     return result
+
+
+def hit_rate_limit(result: SearchResult) -> bool:
+    """Did NWLR show its security check during this search, whatever Lex managed to verify before it?"""
+    return bool(_RATE_LIMIT_WORDS.search(result.note or ""))
 
 
 STATUS_MESSAGES = {
