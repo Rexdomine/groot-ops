@@ -15,6 +15,7 @@ from typing import Callable
 from urllib.parse import unquote_plus
 
 from groot_ops.case_search import CaseSearch
+from groot_ops.legal.nwlr import PAGES_PER_SEARCH, PageBudget, ResultCache, count_pages, waiting_note
 from groot_ops.legal.store import LegalStore
 from groot_ops.telegram_channel import http_json
 
@@ -105,8 +106,10 @@ def result_dict(result) -> dict:
 
 class SearchRunner:
     def __init__(self, store: LegalStore, search: CaseSearch, watcher: LexWatcher | None,
-                 clock: Callable[[], float] = time.time):
+                 clock: Callable[[], float] = time.time, budget: PageBudget | None = None,
+                 cache: ResultCache | None = None, sleep: Callable[[float], None] = time.sleep):
         self.store, self.case_search, self.watcher, self.clock = store, search, watcher, clock
+        self.budget, self.cache, self.sleep = budget, cache, sleep
         self._queue: queue.Queue[str] = queue.Queue()
         self._worker: threading.Thread | None = None
 
@@ -136,6 +139,14 @@ class SearchRunner:
             return
         previous = self.store.previous_question(search["thread_id"], search["created_at"])
         question = compose_question(search["question"], search["court"], previous)
+        if self._reuse(search_id, question):
+            return
+        if self.budget is not None:
+            while (wait := self.budget.wait_seconds()) > 0:
+                self.store.update_search(search_id, status="queued", narration=waiting_note(wait))
+                self.sleep(min(wait, 30))
+        court_words = COURTS.get(search["court"], "").removeprefix("the ").rstrip("s")
+        known = self.cache.known(search["question"], court_words) if self.cache is not None else []
         started_ms = int(self.clock() * 1000)
         state = {"step": 0, "narration": ""}
         self.store.update_search(search_id, status="running", step=0, narration="")
@@ -158,6 +169,33 @@ class SearchRunner:
                 state.update(step=step, narration=narration)
                 self.store.update_search(search_id, step=step, narration=narration)
 
-        result = self.case_search.search(question, on_wait=on_wait)
+        result = self.case_search.search(question, on_wait=on_wait, known=known)
         self.store.update_search(search_id, step=3)
-        self.store.update_search(search_id, status="done", result=result_dict(result), finished_at=self.clock())
+        if self.budget is not None:
+            self.budget.record(self._pages_opened(started_ms))
+            if result.status == "rate_limited":
+                self.budget.blocked()
+        data = result_dict(result)
+        if self.cache is not None:
+            self.cache.remember(question, data)
+        self.store.update_search(search_id, status="done", result=data, finished_at=self.clock())
+
+    def _reuse(self, search_id: str, question: str) -> bool:
+        """The same question was verified recently: answer from that result, with no NWLR pages or tokens."""
+        hit = self.cache.answer(question) if self.cache is not None else None
+        if hit is None:
+            return False
+        data, at = hit
+        when = time.strftime("%d %b %Y", time.localtime(at))
+        note = f"Reused from a verified search on {when}; no new NWLR search was run."
+        data = {**data, "note": f"{note} {data.get('note') or ''}".strip()}
+        self.store.update_search(search_id, status="done", step=3, result=data, finished_at=self.clock())
+        return True
+
+    def _pages_opened(self, started_ms: int) -> int:
+        if self.watcher is None or not hasattr(self.watcher, "poll"):
+            return PAGES_PER_SEARCH
+        try:
+            return count_pages(self.watcher.poll(started_ms)[1])
+        except Exception:
+            return PAGES_PER_SEARCH

@@ -24,7 +24,7 @@ class InstantSearch:
     def __init__(self, data=GOOD):
         self.data, self.asked = data, []
 
-    def search(self, question, on_wait=lambda: None):
+    def search(self, question, on_wait=lambda: None, known=()):
         self.asked.append(question)
         on_wait()
         return verify(self.data)

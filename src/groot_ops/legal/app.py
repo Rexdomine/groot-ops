@@ -22,6 +22,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
 from groot_ops.case_search import CaseSearch, SearchResult, preflight, verify
 from groot_ops.legal.memo import build_memo
+from groot_ops.legal.nwlr import PageBudget, ResultCache
 from groot_ops.legal.runner import COURTS, STEPS, LexWatcher, SearchRunner
 from groot_ops.legal.store import ACTIVE, LegalStore
 
@@ -37,7 +38,7 @@ COURT_LABELS = {"": "All courts", "supreme": "Supreme Court", "appeal": "Court o
 class PreviewSearch:
     """Sample results for design checks only. Every authority is labelled as a sample."""
 
-    def search(self, question, on_wait=lambda: None):
+    def search(self, question, on_wait=lambda: None, known=()):
         for _ in range(3):
             time.sleep(1.2)
             on_wait()
@@ -79,7 +80,8 @@ def create_app() -> FastAPI:
     if not preview:
         with open(os.environ.get("LEGAL_CASE_SEARCH_FILE", "/etc/grootops-bridge/case-search.json"), encoding="utf-8") as handle:
             cfg = json.load(handle)
-        runner = SearchRunner(store, CaseSearch(cfg["api_base"], cfg["bot_id"]), LexWatcher(cfg["api_base"], cfg["bot_id"]))
+        runner = SearchRunner(store, CaseSearch(cfg["api_base"], cfg["bot_id"]), LexWatcher(cfg["api_base"], cfg["bot_id"]),
+                              budget=PageBudget(store, time.time), cache=ResultCache(store, time.time))
     else:
         runner = SearchRunner(store, PreviewSearch(), PreviewWatcher())
     runner.start()

@@ -39,6 +39,16 @@ CREATE TABLE IF NOT EXISTS saved (
     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, citation TEXT NOT NULL, authority TEXT NOT NULL,
     search_id TEXT NOT NULL, created_at REAL NOT NULL, PRIMARY KEY (user_id, citation)
 );
+-- Every NWLR page Lex opened, and when NWLR last blocked us: the hourly page budget reads these.
+CREATE TABLE IF NOT EXISTS nwlr_pages (at REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS nwlr_state (key TEXT PRIMARY KEY, value REAL NOT NULL);
+-- Verified results and authorities, reused so repeat and similar questions open fewer NWLR pages.
+-- Only citations, short quotes, holdings and links are kept: never a report's text.
+CREATE TABLE IF NOT EXISTS answer_cache (question_key TEXT PRIMARY KEY, result TEXT NOT NULL, created_at REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS authority_cache (
+    citation_key TEXT PRIMARY KEY, authority TEXT NOT NULL, words TEXT NOT NULL, verified_at REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS nwlr_pages_by_time ON nwlr_pages(at);
 CREATE INDEX IF NOT EXISTS threads_by_user ON threads(user_id, updated_at DESC);
 CREATE INDEX IF NOT EXISTS searches_by_thread ON searches(thread_id, created_at);
 """
@@ -207,3 +217,44 @@ class LegalStore:
         with self._db() as db:
             return [{**json.loads(r["authority"]), "search_id": r["search_id"], "saved_at": r["created_at"]}
                     for r in db.execute("SELECT * FROM saved WHERE user_id=? ORDER BY created_at DESC", (user_id,))]
+
+    # --- NWLR page budget -----------------------------------------------------------------------
+    def record_pages(self, count: int, at: float) -> None:
+        if count > 0:
+            with self._db() as db:
+                db.executemany("INSERT INTO nwlr_pages VALUES (?)", [(at,)] * count)
+
+    def page_times(self, since: float) -> list[float]:
+        with self._db() as db:
+            db.execute("DELETE FROM nwlr_pages WHERE at < ?", (since - 86400,))
+            return [r["at"] for r in db.execute("SELECT at FROM nwlr_pages WHERE at > ? ORDER BY at", (since,))]
+
+    def set_state(self, key: str, value: float) -> None:
+        with self._db() as db:
+            db.execute("INSERT OR REPLACE INTO nwlr_state VALUES (?,?)", (key, value))
+
+    def state(self, key: str, default: float = 0.0) -> float:
+        with self._db() as db:
+            row = db.execute("SELECT value FROM nwlr_state WHERE key=?", (key,)).fetchone()
+        return row["value"] if row else default
+
+    # --- verified-result cache ------------------------------------------------------------------
+    def cached_answer(self, question_key: str, since: float) -> tuple[dict, float] | None:
+        with self._db() as db:
+            row = db.execute("SELECT result, created_at FROM answer_cache WHERE question_key=? AND created_at >= ?",
+                             (question_key, since)).fetchone()
+        return (json.loads(row["result"]), row["created_at"]) if row else None
+
+    def remember_answer(self, question_key: str, result: dict, at: float) -> None:
+        with self._db() as db:
+            db.execute("INSERT OR REPLACE INTO answer_cache VALUES (?,?,?)", (question_key, json.dumps(result), at))
+
+    def remember_authority(self, citation_key: str, authority: dict, words: list[str], at: float) -> None:
+        with self._db() as db:
+            db.execute("INSERT OR REPLACE INTO authority_cache VALUES (?,?,?,?)",
+                       (citation_key, json.dumps(authority), " ".join(sorted(set(words))), at))
+
+    def cached_authorities(self, since: float) -> list[tuple[dict, set[str]]]:
+        with self._db() as db:
+            rows = db.execute("SELECT authority, words FROM authority_cache WHERE verified_at >= ?", (since,)).fetchall()
+        return [(json.loads(r["authority"]), set(r["words"].split())) for r in rows]

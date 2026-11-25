@@ -93,13 +93,23 @@ class SearchResult:
     note: str = ""
 
 
-def build_request(question: str) -> str:
+KNOWN_FIELDS = ("case_name", "citation", "court", "year", "holding", "quote", "page", "source_url")
+KNOWN_HEADER = (
+    "\n\nKnown authorities (you opened and verified these for earlier questions; use any that answer this "
+    "question as given, without opening them again, and open reports only for what is still missing):"
+)
+
+
+def build_request(question: str, known: list[dict] = ()) -> str:
     question = re.sub(r"\s+", " ", question or "").strip()
     if not question:
         raise ValueError("Ask a research question.")
     if len(question) > MAX_QUESTION_CHARS:
         raise ValueError(f"Keep the question under {MAX_QUESTION_CHARS} characters.")
-    return REQUEST_TEMPLATE.format(question=question)
+    request = REQUEST_TEMPLATE.format(question=question)
+    lines = [json.dumps({k: a.get(k) for k in KNOWN_FIELDS if a.get(k) not in (None, "")}, ensure_ascii=False)
+             for a in known if isinstance(a, dict)]
+    return request + (KNOWN_HEADER + "\n" + "\n".join(lines) if lines else "")
 
 
 def _text(value, limit: int = 1000) -> str:
@@ -236,7 +246,7 @@ STATUS_MESSAGES = {
     "no_results": "I couldn't find an authority on point in NWLR Online.",
     "login_failed": "I couldn't sign in to NWLR Online, so no search ran. The firm's login may need updating.",
     "site_error": "NWLR Online or the research assistant had a problem, so this search didn't finish.",
-    "rate_limited": "NWLR Online is limiting searches from GrootOps right now, so this search didn't finish. Try again in about an hour.",
+    "rate_limited": "NWLR Online is limiting searches from GrootOps right now, so this search didn't finish. Try again in about 2 hours.",
 }
 
 
@@ -296,8 +306,8 @@ class CaseSearch:
         # Lex researches in one chat, so searches queue rather than interleave.
         self._lock = threading.Lock()
 
-    def search(self, question: str, on_wait: Callable[[], None] = lambda: None) -> SearchResult:
-        request = build_request(question)
+    def search(self, question: str, on_wait: Callable[[], None] = lambda: None, known: list[dict] = ()) -> SearchResult:
+        request = build_request(question, known)
         with self._lock:
             return self._search(request, on_wait)
 

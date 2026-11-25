@@ -11,7 +11,7 @@
     no_results: "Lex couldn't find an authority on point in NWLR Online.",
     login_failed: "Lex couldn't sign in to NWLR Online, so no search ran. The firm's NWLR login needs attention.",
     site_error: "NWLR Online or the research assistant had a problem, so this search didn't finish.",
-    rate_limited: "NWLR Online is limiting searches from GrootOps right now, so this search didn't finish. Try again in about an hour.",
+    rate_limited: "NWLR Online is limiting searches from GrootOps right now, so this search didn't finish. Try again in about 2 hours.",
   };
   const state = { me: null, threads: [], threadId: null, thread: null, court: '', poll: null, view: 'home', typed: new Set(), savedCitations: new Set() };
 
@@ -309,7 +309,7 @@
     const running = s.status === 'queued' || s.status === 'running';
     const reply = el('div', { class: 'reply fade-in', 'data-search': s.id }, orb('sm', running), body);
     if (s.status === 'queued') {
-      body.append(el('div', { class: 'pulse', text: s.queued_ahead ? `Waiting for ${s.queued_ahead} search${s.queued_ahead > 1 ? 'es' : ''} ahead of yours…` : 'Starting…' }));
+      body.append(el('div', { class: 'pulse', text: s.narration ? s.narration : s.queued_ahead ? `Waiting for ${s.queued_ahead} search${s.queued_ahead > 1 ? 'es' : ''} ahead of yours…` : 'Starting…' }));
     } else if (s.status === 'running') {
       body.append(el('div', { class: 'pulse' }, 'Researching'));
       body.append(el('div', { class: 'steps' }, ...state.me.steps.map((label, i) =>
