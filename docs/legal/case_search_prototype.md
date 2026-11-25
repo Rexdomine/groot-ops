@@ -91,6 +91,29 @@ LEGAL_PREVIEW=1 LEGAL_DB=/tmp/legal-preview.sqlite3 PYTHONPATH=src .venv/bin/uvi
 
 The sidebar's status line shows "NWLR Online connected" once the login is saved, and "NWLR login needed" until then. A restart of the service marks any unfinished search as failed, with a Try again link.
 
+## Keeping NWLR Online from blocking us
+
+NWLR Online sits behind Cloudflare. When our server loads too many pages it shows a security check
+("Performing security verification", HTTP 429). Lex never tries to pass it: it stops, returns what it has
+verified, and the app holds new searches. Never add proxies, browser disguises or challenge solving.
+
+- **Page budget** (`src/groot_ops/legal/nwlr.py`): the app counts every NWLR page Lex opens and starts a search
+  only if it fits 12 pages per hour; after any security check it holds searches for 2 hours. Lawyers see when
+  a waiting search will start. NWLR's real threshold isn't published: it blocked at about 16 pages in an hour.
+- **Cache**: an identical question within 30 days gets its verified result again (no pages, no tokens). A similar
+  question hands Lex the authorities it already verified, so it opens fewer reports or none. Only citations,
+  short quotes, holdings and links are stored, never report text.
+- **Pacing in Lex**: its two report readers pause between pages, and it may not write its own.
+
+Measured on 2026-11-25 (Lex on `claude-sonnet-5-5`): a fresh search takes 70-130 s, about $0.18-0.29 and 4-11
+NWLR pages; a similar question answered from the cache took 22 s, $0.06 and no pages. Sonnet 5 cost
+$0.24-0.45; Haiku 5.5 was much cheaper but found too few authorities.
+
+Longer term the fix is our own licensed collection of judgments (for example Judy.legal or Laws.Africa,
+NigeriaLII's publisher) for finding cases, with NWLR used only for the citation, plus talks with NWLR.
+NigeriaLII alone isn't enough: its Supreme Court and Court of Appeal judgments stop at 2017, it had 3 of our
+10 benchmark cases, and its robots.txt reserves AI use (`ai-input=no`), so written permission is needed.
+
 ## Pilot pass mark (proposed in the build plan)
 
 At least 3 relevant authorities per test question that the lawyer agrees are on point, no invented citations, an answer in under 5 minutes, and better than their manual search on 2 of the 3 questions.
@@ -98,6 +121,6 @@ At least 3 relevant authorities per test question that the lawyer agrees are on 
 ## Known limits
 
 - The source check proves the link is a case page on NWLR Online, not that the quote appears on it. The lawyer still checks before filing; a quote-on-page check is the next step.
-- One search at a time. A second question waits for the first to finish.
+- One search at a time. A second question waits for the first to finish, and the page budget allows about 2 fresh searches an hour.
 - LawPavilion (a desktop app) is not covered yet; it needs a Windows cloud desktop.
 - Use stays within the pilot lawyer's written permission to use their login. Check the NWLR Online subscription terms before using it more widely.
